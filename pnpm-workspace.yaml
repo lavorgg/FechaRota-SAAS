@@ -3,5 +3,6 @@ onlyBuiltDependencies:
   - esbuild
   - prisma
 ignoredBuiltDependencies:
+  - "@swc/core"
   - sharp
   - unrs-resolver
