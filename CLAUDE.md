@@ -21,6 +21,8 @@ pnpm test              # unitários + integração (precisa do docker compose)
 pnpm test:e2e          # Playwright sobre o build de produção
 ```
 
+Componentes do shadcn/ui: `pnpm dlx shadcn@4.23.0 add <componente>` (base Radix). Depois de adicionar, fixe as versões novas no `package.json` sem `^`.
+
 Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt/pw-browsers/chromium`, e o Docker precisa ser iniciado à mão (`dockerd &`).
 
 ## Regras que não podem ser quebradas
@@ -40,6 +42,7 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 |---|---|---|
 | Serwist | `@serwist/turbopack`; `cacheComponents` desligado | Turbopack é o padrão do Next 16; a integração exige `dynamic = "force-static"` |
 | S3 local | RustFS no lugar do MinIO | `minio/minio` saiu do Docker Hub |
+| Fonte | Fontes do sistema, sem `next/font/google` | O build não depende de baixar fontes; nada externo na área do motorista |
 | Config do Prisma | `prisma.config.ts` | O Prisma 7.10 prefere `prisma7.config.ts`, mas ainda lê o nome antigo |
 | Relações | Chave estrangeira composta (`companyId` + `id`) | O banco passa a impedir vínculo entre empresas |
 | `OrderItem`, `RecurringOrderTemplateItem` | Ganharam `companyId` | "Toda tabela de negócio tem companyId" (seção 3.4) |
@@ -60,5 +63,5 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 
 ## Situação
 
-- **Fase 1:** código, testes e build prontos. Pendentes, por dependerem de acesso externo: `shadcn init` (o host `ui.shadcn.com` está bloqueado neste ambiente) e o deploy de preview na Vercel (exige contas de Vercel, Neon/Supabase, R2 e Upstash).
+- **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
 - Deixados para a fase que os consome: cálculo do fechamento (Fase 6) e lógica da fila offline (Fase 5).

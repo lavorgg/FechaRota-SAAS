@@ -4,7 +4,7 @@ SaaS B2B de romaneio de carga, sequência de entregas e comprovante de entrega p
 
 A especificação completa está em [`docs/especificacao-mvp-v3.md`](docs/especificacao-mvp-v3.md). Os comentários do código citam as seções dela ("seção 3.4").
 
-**Situação:** Fase 1 (fundação) concluída. Ainda não há login, cadastros nem telas de negócio.
+**Situação:** Fase 1 (fundação) pronta no código. Falta o deploy de preview na Vercel, que depende das contas externas (veja "Deploy de preview na Vercel"). Ainda não há login, cadastros nem telas de negócio.
 
 ## O que o produto não é
 
@@ -60,6 +60,8 @@ pnpm dev
 | `pnpm db:seed` | Roda o seed de demonstração num banco vazio |
 | `pnpm db:reset` | Recria banco e bucket locais do zero e roda o seed |
 
+Componentes do shadcn/ui são adicionados com `pnpm dlx shadcn@4.23.0 add <componente>`. A fonte é a do sistema: o `shadcn init` sugere Geist via `next/font/google`, que foi descartada para o build não depender de baixar fontes.
+
 O Playwright baixa o próprio Chromium com `pnpm exec playwright install chromium`. Para usar um Chromium já instalado, defina `PLAYWRIGHT_CHROMIUM_PATH`.
 
 ## Stack
@@ -68,7 +70,7 @@ O Playwright baixa o próprio Chromium com `pnpm exec playwright install chromiu
 |---|---|
 | Runtime | Node.js 22 |
 | Framework | Next.js 16 (App Router, Turbopack), TypeScript estrito com `noUncheckedIndexedAccess` |
-| UI | Tailwind CSS v4 |
+| UI | Tailwind CSS v4 + shadcn/ui (base Radix, estilo `radix-nova`) + `lucide-react` |
 | Banco | PostgreSQL 16, Prisma 7 com `@prisma/adapter-pg` |
 | Arquivos | API S3: RustFS local, Cloudflare R2 na Vercel |
 | PWA | Serwist (`@serwist/turbopack`) |

@@ -4,6 +4,7 @@
 // - Recusa rodar em produção e recusa rodar sobre um banco que já tem dados.
 // - Os dados de negócio são gravados pelo client por empresa (getTenantDb), como no app.
 
+import "./seed-support/refuse-production";
 import "dotenv/config";
 
 import { calcContainersByOrder, type CargoItemInput } from "../domain/cargo-manifest";
@@ -545,9 +546,6 @@ async function seedSecondCompany(today: string, passwordHash: string) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  if (process.env.VERCEL_ENV === "production") {
-    throw new Error("O seed de demonstração não roda em produção (VERCEL_ENV=production).");
-  }
   if ((await prisma.company.count()) > 0) {
     throw new Error("O banco já tem dados. No ambiente local, use `pnpm db:reset` para recriar tudo do zero.");
   }
