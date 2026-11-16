@@ -1,0 +1,539 @@
+// Modelo de dados do FechaRota (seção 4 da especificação).
+//
+// Convenções que valem para o arquivo inteiro:
+// - Dinheiro é sempre Int em centavos. Nunca Float nem Decimal.
+// - Quantidade é Decimal(10,3) e nunca chega crua a um Client Component (ver lib/mappers).
+// - Data de entrega é data de calendário (@db.Date), trafegada como "YYYY-MM-DD".
+// - Toda tabela de negócio tem companyId. As relações entre tabelas de negócio usam
+//   chave estrangeira composta (companyId + id), então o próprio banco impede que um
+//   registro aponte para um registro de outra empresa.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlanStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+enum ProofPolicy {
+  SIGNATURE_REQUIRED
+  PHOTO_OR_SIGNATURE
+}
+
+enum UserRole {
+  ADMIN
+  EXPEDICAO
+  MOTORISTA
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  BOLETO
+  FATURADO
+}
+
+enum ProductUnit {
+  CX
+  DZ
+  FD
+  KG
+  UN
+  PCT
+}
+
+enum DayOfWeek {
+  DOM
+  SEG
+  TER
+  QUA
+  QUI
+  SEX
+  SAB
+}
+
+enum OrderStatus {
+  PENDENTE
+  EM_ROTA
+  ENTREGUE
+  ENTREGUE_PARCIAL
+  NAO_ENTREGUE
+  CANCELADO
+}
+
+enum PaymentStatus {
+  A_RECEBER
+  RECEBIDO
+  PIX_A_CONFERIR
+  FATURADO
+  NAO_RECEBIDO
+}
+
+enum RouteStatus {
+  RASCUNHO
+  LIBERADA_CARGA
+  EM_ANDAMENTO
+  AGUARDANDO_ACERTO
+  CONCLUIDA
+}
+
+enum DeliveryOutcome {
+  ENTREGUE
+  ENTREGUE_PARCIAL
+  NAO_ENTREGUE
+}
+
+enum FailureReason {
+  ESTABELECIMENTO_FECHADO
+  PEDIDO_RECUSADO
+  ENDERECO_NAO_LOCALIZADO
+  CLIENTE_SEM_DINHEIRO
+  AVARIA
+  OUTRO
+}
+
+enum FileKind {
+  PHOTO
+  SIGNATURE
+}
+
+enum FileStatus {
+  PENDING
+  CONFIRMED
+}
+
+model Company {
+  id                  String      @id @default(cuid())
+  name                String
+  cnpj                String?
+  phone               String?
+  timezone            String      @default("America/Sao_Paulo")
+  planStatus          PlanStatus  @default(TRIAL)
+  trialEndsAt         DateTime
+  proofPolicy         ProofPolicy @default(PHOTO_OR_SIGNATURE)
+  fileRetentionMonths Int         @default(12)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  users              User[]
+  counters           CompanyCounter[]
+  vehicles           Vehicle[]
+  customers          Customer[]
+  products           Product[]
+  recurringTemplates RecurringOrderTemplate[]
+  recurringItems     RecurringOrderTemplateItem[]
+  orders             Order[]
+  orderItems         OrderItem[]
+  routes             Route[]
+  deliveryProofs     DeliveryProof[]
+  containerMovements ContainerMovement[]
+  files              FileObject[]
+  auditLogs          AuditLog[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  companyId    String
+  name         String
+  // Único em todo o sistema (não por empresa): o login não pede a empresa.
+  email        String   @unique
+  phone        String?
+  passwordHash String
+  role         UserRole
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  company        Company         @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  sessions       Session[]
+  drivenRoutes   Route[]         @relation("RouteDriver")
+  closedRoutes   Route[]         @relation("RouteClosedBy")
+  recordedProofs DeliveryProof[]
+  uploadedFiles  FileObject[]
+  auditLogs      AuditLog[]
+
+  @@unique([companyId, id])
+  @@index([companyId, role, active])
+}
+
+// Sessão não tem companyId: só é acessada pelo módulo de autenticação, nunca pelo client por empresa.
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model CompanyCounter {
+  companyId String
+  key       String
+  value     Int    @default(0)
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+
+  @@id([companyId, key])
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  companyId  String
+  plate      String
+  model      String
+  capacityKg Int?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  routes  Route[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, plate])
+}
+
+model Customer {
+  id        String  @id @default(cuid())
+  companyId String
+  name      String
+  legalName String?
+  // CPF (11 dígitos) ou CNPJ (14 caracteres, sem pontuação).
+  document  String?
+  // Somente dígitos, com DDI 55.
+  phone     String?
+  active    Boolean @default(true)
+
+  zipCode         String
+  street          String
+  number          String
+  complement      String?
+  neighborhood    String
+  city            String
+  state           String  @db.Char(2)
+  referencePoint  String?
+  latitude        Float?
+  longitude       Float?
+  // Chaves normalizadas (minúsculo, sem acento, sem espaço duplicado). Agrupar sempre por elas.
+  neighborhoodKey String
+  cityKey         String
+
+  defaultPaymentMethod PaymentMethod
+  deliveryWindow       String?
+  notes                String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company            Company                  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  recurringTemplates RecurringOrderTemplate[]
+  orders             Order[]
+  containerMovements ContainerMovement[]
+
+  @@unique([companyId, id])
+  @@index([companyId, cityKey, neighborhoodKey])
+  @@index([companyId, active, name])
+}
+
+model Product {
+  id                    String      @id @default(cuid())
+  companyId             String
+  sku                   String
+  name                  String
+  unit                  ProductUnit
+  priceCents            Int
+  // Peso por unidade de venda, em kg.
+  weightKg              Decimal?    @db.Decimal(10, 3)
+  isReturnableContainer Boolean     @default(false)
+  // Vasilhame retornável em que este produto sai (ex.: caixa plástica).
+  containerProductId    String?
+  unitsPerContainer     Int?
+  active                Boolean     @default(true)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  company            Company                      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  containerProduct   Product?                     @relation("ProductContainer", fields: [companyId, containerProductId], references: [companyId, id], onDelete: Restrict)
+  containedProducts  Product[]                    @relation("ProductContainer")
+  recurringItems     RecurringOrderTemplateItem[]
+  orderItems         OrderItem[]
+  containerMovements ContainerMovement[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, sku])
+  @@index([companyId, active, name])
+}
+
+model RecurringOrderTemplate {
+  id          String    @id @default(cuid())
+  companyId   String
+  customerId  String
+  dayOfWeek   DayOfWeek
+  active      Boolean   @default(true)
+  startsOn    DateTime  @db.Date
+  pausedUntil DateTime? @db.Date
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company  Company                      @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer Customer                     @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
+  items    RecurringOrderTemplateItem[]
+  orders   Order[]
+
+  @@unique([companyId, id])
+  @@index([companyId, dayOfWeek, active])
+  @@index([companyId, customerId])
+}
+
+model RecurringOrderTemplateItem {
+  id             String   @id @default(cuid())
+  companyId      String
+  templateId     String
+  productId      String
+  quantity       Decimal  @db.Decimal(10, 3)
+  // Se nulo, o gerador usa o preço atual do produto.
+  unitPriceCents Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company  Company                @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  template RecurringOrderTemplate @relation(fields: [companyId, templateId], references: [companyId, id], onDelete: Cascade)
+  product  Product                @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, templateId])
+  @@index([companyId, productId])
+}
+
+model Order {
+  id                  String      @id @default(cuid())
+  companyId           String
+  orderNumber         Int
+  customerId          String
+  recurringTemplateId String?
+  routeId             String?
+  stopSequence        Int?
+  deliveryDate        DateTime    @db.Date
+  status              OrderStatus @default(PENDENTE)
+  version             Int         @default(1)
+
+  // Snapshot do endereço no momento do pedido (seção 3.7).
+  deliveryZipCode         String
+  deliveryStreet          String
+  deliveryNumber          String
+  deliveryComplement      String?
+  deliveryNeighborhood    String
+  deliveryCity            String
+  deliveryState           String  @db.Char(2)
+  deliveryReferencePoint  String?
+  deliveryNeighborhoodKey String
+  deliveryCityKey         String
+
+  // Número da NF-e emitida fora do sistema.
+  invoiceNumber String?
+
+  paymentMethod        PaymentMethod
+  totalCents           Int
+  // 0 quando a forma de pagamento é BOLETO ou FATURADO.
+  amountToCollectCents Int
+  paymentStatus        PaymentStatus
+
+  notes                  String?
+  cancelReason           String?
+  rescheduledFromOrderId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  company           Company                 @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer          Customer                @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
+  recurringTemplate RecurringOrderTemplate? @relation(fields: [companyId, recurringTemplateId], references: [companyId, id], onDelete: Restrict)
+  route             Route?                  @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+  rescheduledFrom   Order?                  @relation("OrderReschedule", fields: [companyId, rescheduledFromOrderId], references: [companyId, id], onDelete: Restrict)
+  rescheduledTo     Order[]                 @relation("OrderReschedule")
+  items             OrderItem[]
+  deliveryProof     DeliveryProof?
+  containerMovements ContainerMovement[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, orderNumber])
+  // Idempotência do gerador de recorrência (seção 3.9).
+  @@unique([recurringTemplateId, deliveryDate])
+  @@index([companyId, deliveryDate, status])
+  @@index([companyId, routeId, stopSequence])
+  @@index([companyId, customerId, deliveryDate])
+  @@index([companyId, deliveryCityKey, deliveryNeighborhoodKey])
+}
+
+model OrderItem {
+  id             String      @id @default(cuid())
+  companyId      String
+  orderId        String
+  productId      String
+  // Snapshot do produto no momento do pedido (seção 3.7).
+  productName    String
+  unit           ProductUnit
+  quantity       Decimal     @db.Decimal(10, 3)
+  unitPriceCents Int
+  subtotalCents  Int
+  // Preenchidos na finalização da entrega.
+  deliveredQuantity Decimal? @db.Decimal(10, 3)
+  returnReason      String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  order   Order   @relation(fields: [companyId, orderId], references: [companyId, id], onDelete: Cascade)
+  product Product @relation(fields: [companyId, productId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, orderId])
+  @@index([companyId, productId])
+}
+
+model Route {
+  id           String      @id @default(cuid())
+  companyId    String
+  code         String
+  name         String
+  deliveryDate DateTime    @db.Date
+  driverId     String
+  vehicleId    String?
+  status       RouteStatus @default(RASCUNHO)
+  notes        String?
+  startedAt    DateTime?
+  finishedAt   DateTime?
+  closedAt     DateTime?
+  closedById   String?
+  // Dinheiro que o motorista entregou no caixa, informado no acerto (seção 5.8).
+  cashHandedInCents Int?
+  version      Int         @default(1)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  driver   User     @relation("RouteDriver", fields: [companyId, driverId], references: [companyId, id], onDelete: Restrict)
+  closedBy User?    @relation("RouteClosedBy", fields: [companyId, closedById], references: [companyId, id], onDelete: Restrict)
+  vehicle  Vehicle? @relation(fields: [companyId, vehicleId], references: [companyId, id], onDelete: Restrict)
+  orders   Order[]
+  containerMovements ContainerMovement[]
+
+  @@unique([companyId, id])
+  @@unique([companyId, code])
+  @@index([companyId, deliveryDate, status])
+  @@index([companyId, driverId, deliveryDate])
+}
+
+// Comprovante de Entrega: um por pedido.
+model DeliveryProof {
+  id              String          @id @default(cuid())
+  companyId       String
+  orderId         String
+  // UUID gerado no celular. Reenvio com o mesmo ID não grava nada de novo (seção 3.9).
+  clientRequestId String
+  outcome         DeliveryOutcome
+  // Horário registrado no celular.
+  deliveredAt     DateTime
+  // Horário em que o servidor recebeu.
+  receivedAt      DateTime        @default(now())
+  receiverName     String?
+  receiverDocument String?
+  signatureFileKey String?
+  photoFileKeys    String[]
+  failureReason    FailureReason?
+  failureNote      String?
+  cashCollectedCents Int          @default(0)
+  pixCollectedCents  Int          @default(0)
+  latitude        Float?
+  longitude       Float?
+  accuracyMeters  Float?
+  recordedById    String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  order      Order   @relation(fields: [companyId, orderId], references: [companyId, id], onDelete: Restrict)
+  recordedBy User    @relation(fields: [companyId, recordedById], references: [companyId, id], onDelete: Restrict)
+
+  @@unique([companyId, orderId])
+  @@unique([companyId, clientRequestId])
+  @@index([companyId, deliveredAt])
+}
+
+// Razão de vasilhames por cliente. Saldo = soma(delivered) - soma(returned).
+model ContainerMovement {
+  id                 String   @id @default(cuid())
+  companyId          String
+  customerId         String
+  containerProductId String
+  orderId            String?
+  routeId            String?
+  delivered          Int      @default(0)
+  returned           Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  company          Company  @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  customer         Customer @relation(fields: [companyId, customerId], references: [companyId, id], onDelete: Restrict)
+  containerProduct Product  @relation(fields: [companyId, containerProductId], references: [companyId, id], onDelete: Restrict)
+  order            Order?   @relation(fields: [companyId, orderId], references: [companyId, id], onDelete: Restrict)
+  route            Route?   @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, customerId, containerProductId])
+  @@index([companyId, routeId])
+  @@index([companyId, orderId])
+}
+
+model FileObject {
+  // Sempre "companies/{companyId}/...".
+  key          String     @id
+  companyId    String
+  kind         FileKind
+  mimeType     String
+  sizeBytes    Int
+  status       FileStatus @default(PENDING)
+  uploadedById String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  confirmedAt  DateTime?
+  // Preenchido pelo cron de retenção quando o objeto é apagado do storage (seção 6).
+  deletedAt    DateTime?
+
+  company    Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  uploadedBy User    @relation(fields: [companyId, uploadedById], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, status, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  companyId String
+  // Nulo quando a ação é do sistema (ex.: cron de retenção).
+  userId    String?
+  entity    String
+  entityId  String
+  action    String
+  before    Json?
+  after     Json?
+  reason    String?
+  createdAt DateTime @default(now())
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Restrict)
+  user    User?   @relation(fields: [companyId, userId], references: [companyId, id], onDelete: Restrict)
+
+  @@index([companyId, entity, entityId])
+  @@index([companyId, createdAt])
+}
