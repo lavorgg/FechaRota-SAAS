@@ -8,7 +8,10 @@ import { addDays, dateStringToDbDate, dayOfWeekOfDateString, todayInTimeZone } f
 import { normalizeKey } from "@/domain/normalize";
 import { verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db";
+import { getCargoManifest } from "@/lib/services/manifests";
+import { createRoute, getRoutePlanning, releaseRoute } from "@/lib/services/routes";
 import { statObject } from "@/lib/storage";
+import { createRouteSchema } from "@/lib/validation/routes";
 
 import { cleanDatabase } from "./fixtures";
 
@@ -147,6 +150,50 @@ describe("seed de demonstração", () => {
     expect(Object.fromEntries(counters.map((c) => [c.key, c.value]))).toEqual({ order: 16, route: 1 });
     const max = await prisma.order.aggregate({ where: { companyId: mainCompanyId }, _max: { orderNumber: true } });
     expect(max._max.orderNumber).toBe(16);
+  });
+
+  it("a empresa principal tem endereço do depósito (partida do Google Maps)", async () => {
+    const company = await prisma.company.findUniqueOrThrow({ where: { id: mainCompanyId } });
+    expect(company).toMatchObject({ depotStreet: "Avenida Dom Pedro I", depotNumber: "1500", depotCity: "Ribeirão Preto", depotState: "SP", depotZipCode: "14075000" });
+  });
+
+  it("aceite da Fase 4: romaneio de carga dos 12 pedidos de hoje bate com a soma manual", async () => {
+    const expedicao = await prisma.user.findFirstOrThrow({ where: { companyId: mainCompanyId, role: "EXPEDICAO" } });
+    const driver = await prisma.user.findFirstOrThrow({ where: { companyId: mainCompanyId, role: "MOTORISTA" }, orderBy: { email: "asc" } });
+    const ctx = { userId: expedicao.id, companyId: mainCompanyId, role: "EXPEDICAO" as const, planStatus: "TRIAL" as const, timezone: "America/Sao_Paulo" };
+    const planning = await getRoutePlanning(ctx, today);
+    const orderIds = planning.groups.flatMap((city) => city.neighborhoods.flatMap((n) => n.orders.map((o) => o.id)));
+    expect(orderIds).toHaveLength(12);
+
+    const created = await createRoute(ctx, createRouteSchema.parse({ deliveryDate: today, name: "Todos de hoje", driverId: driver.id, orderIds }));
+    const released = await releaseRoute(ctx, created);
+    const { header, manifest } = await getCargoManifest(ctx, released.id);
+    expect(header).toMatchObject({ companyName: "Distribuidora Exemplo", routeCode: "R-0002", routeVersion: released.version, deliveryDate: today });
+
+    // Soma manual dos itens dos 12 pedidos do seed (quantidade e peso por produto).
+    const lines = manifest.products.map((p) => [p.sku, p.quantityMilli / 1000, (p.weightGrams ?? 0) / 1000]);
+    expect(lines).toEqual([
+      ["CERV-600-CX", 14, 336],
+      ["IOG-170", 156, 28.08],
+      ["LEITE-1L", 210, 220.5],
+      ["OVOS-DZ", 49, 35.28],
+      ["QJ-MUSS", 27.25, 27.25],
+      ["REFRI-2L-FD", 22, 277.2],
+    ]);
+    expect(manifest.totalWeightGrams).toBe(924_310);
+    expect(manifest.weightIncomplete).toBe(false);
+    expect(manifest.containers.map((c) => [c.sku, c.count])).toEqual([
+      ["CAIXA-PLAST", 25],
+      ["ENGRADADO", 14],
+    ]);
+
+    // Conferência independente: a mesma soma feita direto no banco.
+    const sums = await prisma.orderItem.groupBy({ by: ["productId"], where: { order: { routeId: released.id } }, _sum: { quantity: true } });
+    const products = await prisma.product.findMany({ where: { id: { in: sums.map((s) => s.productId) } } });
+    for (const sum of sums) {
+      const sku = products.find((p) => p.id === sum.productId)?.sku;
+      expect(manifest.products.find((p) => p.sku === sku)?.quantityMilli).toBe(Math.round(Number(sum._sum.quantity) * 1000));
+    }
   });
 
   it("recusa rodar de novo sobre um banco com dados", async () => {
