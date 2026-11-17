@@ -18,7 +18,7 @@ pnpm db:reset          # recria banco e bucket LOCAIS e roda o seed
 pnpm typecheck
 pnpm lint
 pnpm test              # unitários + integração (precisa do docker compose)
-pnpm test:e2e          # Playwright sobre o build de produção
+pnpm test:e2e          # Playwright sobre o build de produção (banco e bucket do .env.e2e)
 ```
 
 Componentes do shadcn/ui: `pnpm dlx shadcn@4.23.0 add <componente>` (base Radix). Depois de adicionar, fixe as versões novas no `package.json` sem `^`.
@@ -30,6 +30,9 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 - Dinheiro: `Int` em centavos. Quantidade: milésimos no código, `Decimal(10,3)` no banco. Nunca `Float`.
 - Data de entrega: texto `YYYY-MM-DD` e `@db.Date`. "Hoje" sempre por `todayInTimeZone(company.timezone)`.
 - Banco em `app/` e `components/`: só por `getTenantDb(session)`. O ESLint bloqueia `lib/db`.
+- Toda Server Action do painel passa por `runAction` (sessão, permissão, plano somente leitura, Zod). Regra de negócio vai em `lib/services/*`, que recebem `ServiceContext` e chamam `assertCan`/`assertCanWrite` de novo.
+- Toda página confere a própria permissão (`requirePagePermission`); o layout não basta.
+- Permissão nova: só em `lib/auth/permissions.ts`, com o teste da matriz atualizado.
 - No client por empresa, use chaves escalares (`customerId: "..."`). `connect`, `connectOrCreate` e `set` de relação são recusados, porque copiariam o `companyId` do registro conectado.
 - Modelo novo no schema: classifique em `lib/tenant-scope.ts` e use chave estrangeira composta (`companyId` + `id`) nas relações. Há teste que falha se faltar.
 - Arquivos: só por URL pré-assinada de `lib/storage`. Chave sempre `companies/{companyId}/...`.
@@ -54,14 +57,27 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Rate limit em memória | `ALLOW_IN_MEMORY_RATE_LIMIT`, recusada na Vercel | E2E roda em build de produção local, sem Upstash |
 | `db:reset` | Script próprio que só aceita `localhost` | Não há como apontar para banco remoto por engano |
 | Vasilhames | `ceil(quantidade / unitsPerContainer)` por pedido; nulo = 1 por unidade | A especificação não define a conta |
+| Login | Só e-mail e senha | **Decidido pelo dono do produto** (telefone não é único) |
+| Novo ADMIN | ADMIN cria e promove ADMIN; nunca fica sem ADMIN ativo | **Decidido pelo dono do produto** |
+| Reabrir rota liberada | Só ADMIN (vale a matriz da 5.1, não a 3.8) | **Decidido pelo dono do produto** |
+| Página sem permissão | `notFound()`; área inteira sem acesso redireciona para o início do papel | `forbidden()` do Next ainda é experimental |
+| Status da página negada | 200 com a tela "não encontrada" | O `loading.tsx` do painel inicia o streaming antes da checagem; nenhum dado vaza |
+| Login | Carregamento completo da página de destino, não navegação interna | O documento precisa nascer dentro do escopo do service worker (`/motorista`) |
+| `pausedUntil` | Inclusivo: pausado até o dia 26 não gera no dia 26 | A especificação não define |
+| "Recebido" no dashboard | Dinheiro + Pix já conferido; Pix informado fica em "Pix a conferir" | Seção 5.8: Pix não conta como recebido antes da conferência |
+| Fuso no cadastro | Lista dos 4 fusos do Brasil | `Company.timezone` precisa ser definido em algum lugar |
+| E-mail | Sempre minúsculo, garantido também por CHECK no banco | Evita duas contas para o mesmo e-mail |
+| `@hookform/resolvers` | 5.9.2 | A linha 7.x tem semanas de vida e trocou de versão maior duas vezes em um mês |
 
 ## Perguntas em aberto para o dono do produto
 
 1. **Reagendamento (Fase 3).** A seção 3.8 diz `NAO_ENTREGUE → PENDENTE` no mesmo pedido, mas o modelo tem `rescheduledFromOrderId` (pedido novo) e o comprovante é único por pedido. Reagendar no mesmo pedido impede o segundo comprovante. Proposta: criar pedido novo ligado ao original, que continua `NAO_ENTREGUE`.
-2. **Login por telefone (Fase 2).** O telefone não é único e o e-mail é obrigatório. Dois motoristas com o mesmo número, em empresas diferentes, ficam ambíguos. Proposta: login só por e-mail, ou telefone único em todo o sistema para MOTORISTA.
-3. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
+2. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
+3. **ADMIN na área do motorista (Fase 5).** A matriz dá ao ADMIN "ver suas rotas e finalizar entregas", mas rota só é atribuída a MOTORISTA. Hoje o ADMIN entra em `/motorista` e vê só rotas atribuídas a ele (nenhuma). Ele deveria poder finalizar entregas de qualquer rota (ex.: celular do motorista quebrou)?
+4. **Configurações da empresa.** Nenhuma fase lista a tela para editar nome, CNPJ, fuso, política de comprovante e retenção de arquivos, mas a matriz tem a permissão. Em qual fase entra?
 
 ## Situação
 
 - **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
+- **Fase 2:** pronta. O botão "gerar" do alerta de recorrentes no dashboard entra com o gerador (Fase 3). A limpeza do IndexedDB e o bloqueio de logout com entregas na fila entram com a fila (Fase 5). Rate limit dos endpoints do motorista entra com os endpoints (Fase 5).
 - Deixados para a fase que os consome: cálculo do fechamento (Fase 6) e lógica da fila offline (Fase 5).

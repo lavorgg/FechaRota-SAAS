@@ -4,7 +4,7 @@ SaaS B2B de romaneio de carga, sequência de entregas e comprovante de entrega p
 
 A especificação completa está em [`docs/especificacao-mvp-v3.md`](docs/especificacao-mvp-v3.md). Os comentários do código citam as seções dela ("seção 3.4").
 
-**Situação:** Fase 1 (fundação) pronta no código. Falta o deploy de preview na Vercel, que depende das contas externas (veja "Deploy de preview na Vercel"). Ainda não há login, cadastros nem telas de negócio.
+**Situação:** Fases 1 e 2 prontas no código: fundação, login, sessões, cadastro de empresa, gestão de usuários, matriz de permissões, rate limit, layout do painel e do motorista e dashboard. Falta o deploy de preview na Vercel, que depende das contas externas (veja "Deploy de preview na Vercel"). Cadastros, pedidos, rotas e entregas vêm nas próximas fases.
 
 ## O que o produto não é
 
@@ -43,6 +43,8 @@ pnpm dev
 - `docker compose up -d` sobe o Postgres de desenvolvimento (porta 5432), o Postgres de teste (5433) e o armazenamento S3 local (9000), e cria os buckets `fecharota-dev` e `fecharota-test`.
 - `pnpm db:reset` apaga o banco e o bucket **locais**, aplica as migrations e roda o seed. As credenciais de demonstração aparecem no terminal. O comando se recusa a rodar contra qualquer host que não seja `localhost`.
 - Com `pnpm dev` no ar, <http://localhost:3000/api/health> deve responder `{"status":"ok","checks":{"database":"ok","storage":"ok"}}`.
+- Entre em <http://localhost:3000/login> com uma das contas impressas pelo seed (senha `fecharota123`): `admin@exemplo.test`, `expedicao@exemplo.test` ou `motorista1@exemplo.test`.
+- Para trocar de perfil sem sair e entrar de novo, defina `ENABLE_DEV_IMPERSONATION="true"` no `.env` e rode `pnpm dev`. O botão "Trocar perfil (dev)" aparece no canto da tela. Fora de `next dev` a troca não existe: o app se recusa a iniciar com essa variável ligada.
 
 ### Comandos
 
@@ -54,7 +56,7 @@ pnpm dev
 | `pnpm typecheck` | Gera os tipos de rota do Next e roda `tsc --noEmit` |
 | `pnpm lint` | ESLint |
 | `pnpm test` | Vitest: testes unitários e de integração (exige `docker compose up -d`) |
-| `pnpm test:e2e` | Playwright sobre o build de produção (faz o build sozinho) |
+| `pnpm test:e2e` | Playwright sobre o build de produção. Usa banco (`fecharota_e2e`) e bucket (`fecharota-e2e`) próprios, recriados a cada execução a partir do `.env.e2e`: não apaga os dados de desenvolvimento |
 | `pnpm db:migrate` | Cria e aplica migration em desenvolvimento (`prisma migrate dev`) |
 | `pnpm db:deploy` | Aplica migrations pendentes (`prisma migrate deploy`) |
 | `pnpm db:seed` | Roda o seed de demonstração num banco vazio |
@@ -91,6 +93,16 @@ Estas regras vêm da seção 3 da especificação e são verificadas por teste o
 - **Numeração por empresa** usa `CompanyCounter` com incremento atômico na mesma transação (`lib/counters.ts`).
 - **Arquivos** nunca passam pelas funções da Vercel. O navegador envia e baixa direto do storage com URL pré-assinada (`lib/storage`), e toda chave começa com `companies/{companyId}/`.
 - **Variáveis de ambiente** são validadas em todo `next dev`, `next build` e `next start` (`lib/env.ts`). Faltando alguma, o comando falha com a lista do que corrigir.
+
+## Autenticação e permissões (Fase 2)
+
+- **Login só por e-mail e senha.** O telefone não é único no sistema, então não serve de login (decisão do dono do produto).
+- **Sessão** em tabela `Session`. O navegador guarda um token aleatório; o banco guarda só o hash SHA-256. Cookie `HttpOnly`, `SameSite=Lax` e, em produção, `Secure` com prefixo `__Host-`. Duração: 30 dias para motorista, 12 horas para o painel.
+- **Verificação em cada página e Server Action** (`lib/auth/current.ts`, `lib/actions/run-action.ts`). O `proxy.ts` só manda para o login quem chega sem cookie.
+- **Matriz de permissões** em `lib/auth/permissions.ts`, conferida por teste contra a tabela da seção 5.1.
+- **Rate limit** (`lib/rate-limit`): login com 10 tentativas por e-mail + IP e 100 por IP em 15 minutos (login certo zera a contagem do e-mail), cadastro de empresa com 5 por IP por hora. As chaves vão para o Redis como hash.
+- **Plano em atraso ou cancelado** (`PAST_DUE`, `CANCELED`): o painel mostra o aviso e todas as alterações são recusadas no servidor.
+- **Usuários:** o ADMIN cria e promove qualquer papel, inclusive ADMIN. Ninguém muda o próprio papel nem se desativa, e a empresa nunca fica sem ADMIN ativo (inclusive com duas alterações simultâneas). Troca de papel, desativação e nova senha encerram as sessões do usuário. Tudo vai para a auditoria, sem senha.
 
 ## Decisões da Fase 1
 
@@ -144,9 +156,11 @@ O deploy de produção, o CORS do R2 e os crons entram na Fase 6.
 app/                  rotas do Next (páginas, Route Handlers, service worker)
 components/           componentes React
 domain/               regras de negócio puras, sem banco (com testes unitários)
-lib/                  infraestrutura: env, banco, isolamento por empresa, storage
+lib/                  infraestrutura: env, banco, isolamento por empresa, storage,
+                      autenticação, rate limit, serviços e validação compartilhada
 prisma/               schema, migrations e seed
 scripts/              db:reset, etapa de migration do build, gerador de ícones
 tests/integration/    Vitest contra Postgres e storage de teste
-tests/e2e/            Playwright sobre o build de produção
+tests/e2e/            Playwright sobre o build de produção (banco e bucket do .env.e2e)
+proxy.ts              redireciona para o login quem chega sem cookie de sessão
 ```
