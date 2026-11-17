@@ -1,7 +1,8 @@
 "use client";
 
-import { CarFrontIcon, ClipboardListIcon, LayoutDashboardIcon, PackageIcon, StoreIcon, TruckIcon, UsersIcon } from "lucide-react";
+import { Building2Icon, CarFrontIcon, ClipboardListIcon, LayoutDashboardIcon, PackageIcon, RouteIcon, StoreIcon, TruckIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
+import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import {
@@ -22,17 +23,21 @@ import type { NavIcon, NavItem } from "./nav";
 const ICONS: Record<NavIcon, typeof LayoutDashboardIcon> = {
   dashboard: LayoutDashboardIcon,
   pedidos: ClipboardListIcon,
+  rotas: RouteIcon,
   clientes: StoreIcon,
   produtos: PackageIcon,
   veiculos: CarFrontIcon,
   usuarios: UsersIcon,
+  empresa: Building2Icon,
 };
 
-export function PanelSidebar({ items, companyName }: { items: ReadonlyArray<Omit<NavItem, "permission">>; companyName: string }) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const date = searchParams.get(DATE_PARAM);
+type Items = ReadonlyArray<Omit<NavItem, "permission">>;
 
+// Só a lista de links lê a data da URL (useSearchParams), então só ela fica dentro do
+// Suspense. O <Sidebar> fica de fora: ele troca de forma no celular (Sheet) e precisa hidratar
+// junto com o SidebarProvider; dentro de uma fronteira que hidrata depois, o HTML do servidor
+// não batia com o cliente.
+export function PanelSidebar({ items, companyName }: { items: Items; companyName: string }) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -55,27 +60,40 @@ export function PanelSidebar({ items, companyName }: { items: ReadonlyArray<Omit
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
-            <SidebarMenu aria-label="Menu principal">
-              {items.map((item) => {
-                const Icon = ICONS[item.icon];
-                const href = item.usesDate && date ? `${item.href}?${DATE_PARAM}=${date}` : item.href;
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-                return (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
-                      <Link href={href} aria-current={active ? "page" : undefined}>
-                        <Icon aria-hidden />
-                        <span>{item.label}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            <Suspense fallback={<PanelNav items={items} date={null} />}>
+              <PanelNavWithDate items={items} />
+            </Suspense>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
       <SidebarRail />
     </Sidebar>
+  );
+}
+
+function PanelNavWithDate({ items }: { items: Items }) {
+  return <PanelNav items={items} date={useSearchParams().get(DATE_PARAM)} />;
+}
+
+function PanelNav({ items, date }: { items: Items; date: string | null }) {
+  const pathname = usePathname();
+  return (
+    <SidebarMenu aria-label="Menu principal">
+      {items.map((item) => {
+        const Icon = ICONS[item.icon];
+        const href = item.usesDate && date ? `${item.href}?${DATE_PARAM}=${date}` : item.href;
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        return (
+          <SidebarMenuItem key={item.href}>
+            <SidebarMenuButton asChild isActive={active} tooltip={item.label}>
+              <Link href={href} aria-current={active ? "page" : undefined}>
+                <Icon aria-hidden />
+                <span>{item.label}</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        );
+      })}
+    </SidebarMenu>
   );
 }
