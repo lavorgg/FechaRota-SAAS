@@ -8,6 +8,7 @@ import {
   canTransitionOrder,
   isFinalOrderStatus,
   isOrderEditable,
+  isOrderReschedulable,
 } from "./order-status";
 import {
   InvalidRouteTransitionError,
@@ -29,7 +30,6 @@ const VALID_ORDER_TRANSITIONS: ReadonlyArray<readonly [OrderStatus, OrderStatus]
   ["EM_ROTA", "ENTREGUE_PARCIAL"],
   ["EM_ROTA", "NAO_ENTREGUE"],
   ["EM_ROTA", "PENDENTE"],
-  ["NAO_ENTREGUE", "PENDENTE"],
 ];
 
 const VALID_ROUTE_TRANSITIONS: ReadonlyArray<readonly [RouteStatus, RouteStatus]> = [
@@ -57,7 +57,7 @@ describe("máquina de estados do pedido", () => {
 
   it("cobre todos os 36 pares possíveis", () => {
     expect(VALID_ORDER_TRANSITIONS.length + invalid.length).toBe(36);
-    expect(invalid).toHaveLength(29);
+    expect(invalid).toHaveLength(30);
   });
 
   it.each(invalid)("rejeita %s -> %s", (from, to) => {
@@ -65,8 +65,13 @@ describe("máquina de estados do pedido", () => {
     expect(() => assertOrderTransition(from, to)).toThrow(InvalidOrderTransitionError);
   });
 
-  it("ENTREGUE, ENTREGUE_PARCIAL e CANCELADO são finais", () => {
-    expect(ORDER_STATUSES.filter(isFinalOrderStatus)).toEqual(["ENTREGUE", "ENTREGUE_PARCIAL", "CANCELADO"]);
+  it("ENTREGUE, ENTREGUE_PARCIAL, NAO_ENTREGUE e CANCELADO são finais", () => {
+    // Reagendar não reabre o pedido não entregue: cria outro (decisão do dono do produto).
+    expect(ORDER_STATUSES.filter(isFinalOrderStatus)).toEqual(["ENTREGUE", "ENTREGUE_PARCIAL", "NAO_ENTREGUE", "CANCELADO"]);
+  });
+
+  it("só NAO_ENTREGUE pode ser reagendado", () => {
+    expect(ORDER_STATUSES.filter(isOrderReschedulable)).toEqual(["NAO_ENTREGUE"]);
   });
 
   it("só PENDENTE é editável", () => {

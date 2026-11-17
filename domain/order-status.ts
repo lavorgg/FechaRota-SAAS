@@ -18,15 +18,18 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * - PENDENTE -> CANCELADO: cancelamento com motivo.
  * - EM_ROTA -> ENTREGUE | ENTREGUE_PARCIAL | NAO_ENTREGUE: desfecho registrado pelo motorista.
  * - EM_ROTA -> PENDENTE: somente quando a rota volta para RASCUNHO (com auditoria).
- * - NAO_ENTREGUE -> PENDENTE: reagendamento para outra data.
- * - ENTREGUE, ENTREGUE_PARCIAL e CANCELADO são finais.
+ * - ENTREGUE, ENTREGUE_PARCIAL, NAO_ENTREGUE e CANCELADO são finais.
+ *
+ * Reagendar um pedido NAO_ENTREGUE NÃO muda o pedido: cria um pedido novo, PENDENTE, ligado
+ * ao original por `rescheduledFromOrderId` (decisão do dono do produto, no lugar da transição
+ * NAO_ENTREGUE -> PENDENTE da seção 3.8). O original guarda o comprovante da tentativa.
  */
 export const ORDER_TRANSITIONS: Readonly<Record<OrderStatus, readonly OrderStatus[]>> = {
   PENDENTE: ["EM_ROTA", "CANCELADO"],
   EM_ROTA: ["ENTREGUE", "ENTREGUE_PARCIAL", "NAO_ENTREGUE", "PENDENTE"],
   ENTREGUE: [],
   ENTREGUE_PARCIAL: [],
-  NAO_ENTREGUE: ["PENDENTE"],
+  NAO_ENTREGUE: [],
   CANCELADO: [],
 };
 
@@ -42,6 +45,11 @@ export function isFinalOrderStatus(status: OrderStatus): boolean {
 /** Só pedido PENDENTE pode ser editado ou entrar/sair de uma rota em rascunho. */
 export function isOrderEditable(status: OrderStatus): boolean {
   return status === "PENDENTE";
+}
+
+/** Só pedido não entregue pode ser reagendado (e só uma vez: ver schema). */
+export function isOrderReschedulable(status: OrderStatus): boolean {
+  return status === "NAO_ENTREGUE";
 }
 
 export class InvalidOrderTransitionError extends Error {
