@@ -25,10 +25,10 @@ export async function createCompanyFixture(label: string) {
   const db = getTenantDb({ companyId });
 
   const admin = await db.user.create({
-    data: { companyId, name: `Admin ${label}`, email: `admin-${label}-${randomUUID()}@teste.local`, passwordHash: "hash-de-teste", role: "ADMIN" },
+    data: { companyId, name: `Admin ${label}`, email: `admin-${label.toLowerCase()}-${randomUUID()}@teste.local`, passwordHash: "hash-de-teste", role: "ADMIN" },
   });
   const driver = await db.user.create({
-    data: { companyId, name: `Motorista ${label}`, email: `motorista-${label}-${randomUUID()}@teste.local`, passwordHash: "hash-de-teste", role: "MOTORISTA" },
+    data: { companyId, name: `Motorista ${label}`, email: `motorista-${label.toLowerCase()}-${randomUUID()}@teste.local`, passwordHash: "hash-de-teste", role: "MOTORISTA" },
   });
   const session = await prisma.session.create({
     data: { userId: admin.id, tokenHash: `token-${randomUUID()}`, expiresAt: new Date("2030-01-01T00:00:00Z") },
@@ -113,4 +113,12 @@ export async function createCompanyFixture(label: string) {
   if (!templateItem || !orderItem) throw new Error("Fixture incompleta.");
 
   return { company, companyId, db, admin, driver, session, counter, vehicle, customer, container, product, template, templateItem, route, order, orderItem, file, proof, movement, audit };
+}
+
+/** Contexto de serviço para um usuário da fixture (o que a sessão montaria). */
+export function contextOf(
+  user: { id: string; companyId: string; role: "ADMIN" | "EXPEDICAO" | "MOTORISTA" },
+  planStatus: "TRIAL" | "ACTIVE" | "PAST_DUE" | "CANCELED" = "ACTIVE",
+) {
+  return { userId: user.id, companyId: user.companyId, role: user.role, planStatus, timezone: "America/Sao_Paulo" };
 }

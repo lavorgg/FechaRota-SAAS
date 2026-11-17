@@ -1,9 +1,12 @@
 import { defineConfig, devices } from "@playwright/test";
 
+import { e2eEnv } from "./tests/e2e/env";
+
 const PORT = 3100;
 
 // Os testes E2E rodam SEMPRE sobre o build de produção (seção 9): é o único jeito de testar
-// o service worker, que fica desligado em `next dev`.
+// o service worker, que fica desligado em `next dev`. Banco e bucket são os do .env.e2e,
+// recriados por tests/e2e/prepare.ts a cada execução, antes do build.
 export default defineConfig({
   testDir: "tests/e2e",
   fullyParallel: false,
@@ -24,14 +27,21 @@ export default defineConfig({
   projects: [
     {
       name: "celular",
+      testMatch: ["fundacao.spec.ts", "motorista.spec.ts", "painel-celular.spec.ts"],
       use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
+    {
+      name: "painel",
+      testMatch: ["auth.spec.ts", "permissoes.spec.ts", "dashboard.spec.ts", "usuarios.spec.ts"],
+      use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } },
     },
   ],
   webServer: {
-    command: `pnpm build && pnpm exec next start -p ${PORT}`,
+    command: `pnpm exec tsx tests/e2e/prepare.ts && pnpm build && pnpm exec next start -p ${PORT}`,
     url: `http://localhost:${PORT}/api/health`,
+    env: e2eEnv(),
     reuseExistingServer: false,
-    timeout: 240_000,
+    timeout: 300_000,
     stdout: "ignore",
     stderr: "pipe",
   },

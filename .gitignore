@@ -46,6 +46,7 @@ next-env.d.ts
 # env versionados de propósito (sem segredos reais)
 !.env.example
 !.env.test
+!.env.e2e
 
 # client do Prisma (gerado por `prisma generate`)
 /generated/prisma
