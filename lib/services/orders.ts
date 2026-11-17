@@ -13,6 +13,7 @@ import { type CatalogProduct, type PricedLine, priceOrderLines } from "../../dom
 import { type OrderStatus, assertOrderTransition, isOrderEditable, isOrderReschedulable } from "../../domain/order-status";
 import { type PaymentMethod, type PaymentStatus, calcAmountToCollectCents, initialPaymentStatus } from "../../domain/payment";
 import { type ProductUnit, milliToDecimalString } from "../../domain/quantity";
+import { preferredSpelling } from "../../domain/spelling";
 import { type ServiceContext, assertCan, assertCanWrite } from "../auth/context";
 import { COUNTER_KEYS, nextCounterValue } from "../counters";
 import { MESSAGES, ServiceError, notFound, prismaErrorCode } from "../errors";
@@ -457,14 +458,6 @@ export type OrderFilterOptions = {
   routes: Array<{ id: string; code: string; name: string }>;
 };
 
-/** Grafia "bem escrita": inicial maiúscula sem estar toda em maiúsculas, e com acento quando houver. */
-function spellingScore(text: string): number {
-  const trimmed = text.trim();
-  const titleLike = trimmed.charAt(0) === trimmed.charAt(0).toUpperCase() && trimmed !== trimmed.toUpperCase() ? 2 : 0;
-  const accented = /[^\u0000-\u007f]/.test(trimmed) ? 1 : 0;
-  return titleLike + accented;
-}
-
 /**
  * Opções do filtro de bairro: uma por chave normalizada (seção 4), com a grafia original
  * mais usada; no empate, a mais bem escrita ("Centro" ganha de "CENTRO" e de "centro ").
@@ -472,17 +465,17 @@ function spellingScore(text: string): number {
 export function neighborhoodOptions(
   groups: ReadonlyArray<{ deliveryCityKey: string; deliveryNeighborhoodKey: string; deliveryCity: string; deliveryNeighborhood: string; _count: { _all: number } }>,
 ): Array<{ value: string; label: string }> {
-  const best = new Map<string, { label: string; count: number; score: number }>();
+  const byKey = new Map<string, { neighborhoods: Array<{ text: string; count: number }>; cities: Array<{ text: string; count: number }> }>();
   for (const group of groups) {
     const value = neighborhoodFilterValue(group.deliveryCityKey, group.deliveryNeighborhoodKey);
-    const label = `${group.deliveryNeighborhood.trim()} · ${group.deliveryCity.trim()}`;
-    const score = spellingScore(group.deliveryNeighborhood) * 10 + spellingScore(group.deliveryCity);
-    const count = group._count._all;
-    const current = best.get(value);
-    const better = !current || count > current.count || (count === current.count && (score > current.score || (score === current.score && label < current.label)));
-    if (better) best.set(value, { label, count, score });
+    const entry = byKey.get(value) ?? { neighborhoods: [], cities: [] };
+    entry.neighborhoods.push({ text: group.deliveryNeighborhood, count: group._count._all });
+    entry.cities.push({ text: group.deliveryCity, count: group._count._all });
+    byKey.set(value, entry);
   }
-  return [...best.entries()].map(([value, { label }]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  return [...byKey]
+    .map(([value, entry]) => ({ value, label: `${preferredSpelling(entry.neighborhoods)} · ${preferredSpelling(entry.cities)}` }))
+    .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
 }
 
 /** Valor do filtro de bairro: cidade e bairro normalizados, juntos. */
