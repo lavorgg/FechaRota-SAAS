@@ -54,9 +54,9 @@ export async function getDashboard(ctx: ServiceContext, date: string, now: Date 
       },
       orderBy: { customer: { name: "asc" } },
     }),
-    db.order.count({ where: { status: "NAO_ENTREGUE", rescheduledTo: { none: {} } } }),
+    db.order.count({ where: { status: "NAO_ENTREGUE", rescheduledTo: { is: null } } }),
     db.order.findMany({
-      where: { status: "NAO_ENTREGUE", rescheduledTo: { none: {} } },
+      where: { status: "NAO_ENTREGUE", rescheduledTo: { is: null } },
       select: { orderNumber: true, deliveryDate: true, customer: { select: { name: true } } },
       orderBy: [{ deliveryDate: "desc" }, { orderNumber: "desc" }],
       take: ALERT_LIST_LIMIT,

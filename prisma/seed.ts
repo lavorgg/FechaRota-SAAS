@@ -13,6 +13,7 @@ import { calcCNPJCheckDigits } from "../domain/document";
 import { normalizeKey } from "../domain/normalize";
 import { type PaymentMethod, calcAmountToCollectCents, initialPaymentStatus } from "../domain/payment";
 import { type ProductUnit, calcSubtotalCents, milliToDecimalString } from "../domain/quantity";
+import { customerSearchText, productSearchText } from "../domain/search";
 import { hashPassword } from "../lib/auth/password";
 import { COUNTER_KEYS, formatRouteCode, nextCounterValue } from "../lib/counters";
 import { prisma } from "../lib/db";
@@ -137,6 +138,7 @@ async function createProducts(db: TenantDb, companyId: string, seeds: ProductSee
         isReturnableContainer: seed.isReturnableContainer ?? false,
         containerProductId: container?.id ?? null,
         unitsPerContainer: seed.unitsPerContainer ?? null,
+        searchText: productSearchText(seed),
       },
     });
     bySku.set(seed.sku, {
@@ -174,6 +176,7 @@ async function createCustomers(db: TenantDb, companyId: string, seeds: CustomerS
         longitude: seed.longitude ?? null,
         neighborhoodKey: normalizeKey(seed.neighborhood),
         cityKey: normalizeKey(seed.city),
+        searchText: customerSearchText({ ...seed, document: demoCnpj(indexOffset + index), phone: demoPhone(indexOffset + index) }),
         defaultPaymentMethod: seed.paymentMethod,
         deliveryWindow: seed.deliveryWindow ?? null,
       },

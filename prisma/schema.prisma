@@ -231,6 +231,9 @@ model Customer {
   // Chaves normalizadas (minúsculo, sem acento, sem espaço duplicado). Agrupar sempre por elas.
   neighborhoodKey String
   cityKey         String
+  // Texto de busca normalizado (minúsculo, sem acento): nome, razão social, bairro, cidade,
+  // documento e telefone. Mantido pelo app (domain/search.ts) a cada gravação.
+  searchText      String  @default("")
 
   defaultPaymentMethod PaymentMethod
   deliveryWindow       String?
@@ -245,6 +248,8 @@ model Customer {
   containerMovements ContainerMovement[]
 
   @@unique([companyId, id])
+  // Um CPF/CNPJ por empresa: evita cliente duplicado (cadastro manual e importação).
+  @@unique([companyId, document])
   @@index([companyId, cityKey, neighborhoodKey])
   @@index([companyId, active, name])
 }
@@ -263,6 +268,8 @@ model Product {
   containerProductId    String?
   unitsPerContainer     Int?
   active                Boolean     @default(true)
+  // Texto de busca normalizado (SKU e nome). Mantido pelo app (domain/search.ts).
+  searchText            String      @default("")
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
@@ -364,13 +371,16 @@ model Order {
   recurringTemplate RecurringOrderTemplate? @relation(fields: [companyId, recurringTemplateId], references: [companyId, id], onDelete: Restrict)
   route             Route?                  @relation(fields: [companyId, routeId], references: [companyId, id], onDelete: Restrict)
   rescheduledFrom   Order?                  @relation("OrderReschedule", fields: [companyId, rescheduledFromOrderId], references: [companyId, id], onDelete: Restrict)
-  rescheduledTo     Order[]                 @relation("OrderReschedule")
+  // Reagendar cria UM pedido novo ligado ao original (decisão do dono do produto).
+  rescheduledTo     Order?                  @relation("OrderReschedule")
   items             OrderItem[]
   deliveryProof     DeliveryProof?
   containerMovements ContainerMovement[]
 
   @@unique([companyId, id])
   @@unique([companyId, orderNumber])
+  // Um pedido não entregue é reagendado no máximo uma vez.
+  @@unique([companyId, rescheduledFromOrderId])
   // Idempotência do gerador de recorrência (seção 3.9).
   @@unique([recurringTemplateId, deliveryDate])
   @@index([companyId, deliveryDate, status])
