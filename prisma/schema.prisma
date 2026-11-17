@@ -121,6 +121,17 @@ model Company {
   trialEndsAt         DateTime
   proofPolicy         ProofPolicy @default(PHOTO_OR_SIGNATURE)
   fileRetentionMonths Int         @default(12)
+  // Endereço do depósito: ponto de partida do link de rota no Google Maps (seção 5.6;
+  // decisão do dono do produto). Opcional: sem ele, o Maps parte da localização do aparelho.
+  depotZipCode        String?
+  depotStreet         String?
+  depotNumber         String?
+  depotComplement     String?
+  depotNeighborhood   String?
+  depotCity           String?
+  depotState          String?     @db.Char(2)
+  depotLatitude       Float?
+  depotLongitude      Float?
   createdAt           DateTime    @default(now())
   updatedAt           DateTime    @updatedAt
 

@@ -107,12 +107,15 @@ function saoPauloInstant(dateString: string, time: string): Date {
   return new Date(`${dateString}T${time}:00-03:00`);
 }
 
-async function createCompany(params: { name: string; cnpj: string; phone: string }) {
+type DepotSeed = { depotZipCode: string; depotStreet: string; depotNumber: string; depotNeighborhood: string; depotCity: string; depotState: string };
+
+async function createCompany(params: { name: string; cnpj: string; phone: string; depot?: DepotSeed }) {
   return prisma.company.create({
     data: {
       name: params.name,
       cnpj: params.cnpj,
       phone: params.phone,
+      ...params.depot,
       timezone: TIMEZONE,
       planStatus: "TRIAL",
       trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
@@ -310,7 +313,13 @@ async function uploadProofFile(db: TenantDb, params: { companyId: string; orderI
 
 async function seedMainCompany(today: string, passwordHash: string) {
   const yesterday = addDays(today, -1);
-  const company = await createCompany({ name: "Distribuidora Exemplo", cnpj: demoCnpj(0), phone: "551633330000" });
+  const company = await createCompany({
+    name: "Distribuidora Exemplo",
+    cnpj: demoCnpj(0),
+    phone: "551633330000",
+    // Ponto de partida dos links do Google Maps (seção 5.6).
+    depot: { depotZipCode: "14075000", depotStreet: "Avenida Dom Pedro I", depotNumber: "1500", depotNeighborhood: "Ipiranga", depotCity: "Ribeirão Preto", depotState: "SP" },
+  });
   const companyId = company.id;
   const db = getTenantDb({ companyId });
 
