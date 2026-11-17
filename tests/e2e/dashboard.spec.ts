@@ -4,8 +4,9 @@ import { expect, test } from "@playwright/test";
 
 import { USERS, login } from "./helpers";
 
+// Só o que está visível: na troca de data, a página anterior fica um instante no DOM, escondida.
 function card(page: import("@playwright/test").Page, label: string) {
-  return page.locator('[data-slot="card"]').filter({ hasText: label });
+  return page.locator('[data-slot="card"]').filter({ hasText: label, visible: true });
 }
 
 test("hoje: 12 pedidos pendentes e os alertas do seed", async ({ page }) => {

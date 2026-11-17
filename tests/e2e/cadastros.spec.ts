@@ -118,6 +118,9 @@ test("pedido recorrente do cliente: cria e pausa", async ({ page }) => {
   const dialog = page.getByRole("dialog");
   await dialog.getByRole("combobox", { name: "Dia da semana" }).click();
   await page.getByRole("option", { name: "Sexta-feira" }).click();
+  // O select devolve o foco ao próprio gatilho quando fecha; sem esperar, o foco pode voltar
+  // para ele depois de digitar o produto, e o Enter reabre o select.
+  await expect(dialog.getByRole("combobox", { name: "Dia da semana" })).toBeFocused();
   await dialog.getByRole("combobox", { name: "Buscar produto" }).fill("CERV-600");
   await page.keyboard.press("Enter");
   await dialog.getByRole("button", { name: "Salvar" }).click();

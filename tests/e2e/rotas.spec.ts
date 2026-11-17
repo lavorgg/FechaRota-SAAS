@@ -27,11 +27,13 @@ test("aceite: monta rota por bairro, reordena, libera e imprime os romaneios", a
 
   // Aviso (não bloqueio) de capacidade: Fiorino de 650 kg com os dois "Centro".
   await page.getByRole("checkbox", { name: "Selecionar o bairro Centro (Ribeirão Preto)" }).click();
-  await page.getByRole("checkbox", { name: "Selecionar o bairro Centro (Sertãozinho)" }).click();
+  // O rótulo é a grafia mais usada nos pedidos do dia: os testes de pedidos lançam pedidos
+  // para um cliente cadastrado como "Sertaozinho".
+  await page.getByRole("checkbox", { name: /^Selecionar o bairro Centro \(Sert[ãa]ozinho\)$/ }).click();
   await page.getByLabel("Veículo").click();
   await page.getByRole("option", { name: /FRT4B56/ }).click();
   await expect(page.getByText(/acima da capacidade do veículo \(650 kg\)/)).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Nome da rota" })).toHaveValue("Centro (Ribeirão Preto) / Centro (Sertãozinho)");
+  await expect(page.getByRole("textbox", { name: "Nome da rota" })).toHaveValue(/^Centro \(Ribeirão Preto\) \/ Centro \(Sert[ãa]ozinho\)$/);
   await page.getByRole("button", { name: "Limpar seleção" }).click();
 
   // Bairro inteiro: 3 pedidos, 134,27 kg, 6 volumes (itens dos pedidos).
@@ -64,9 +66,14 @@ test("aceite: monta rota por bairro, reordena, libera e imprime os romaneios", a
   const liveRegion = page.locator('[id^="DndLiveRegion"]');
   await page.getByRole("button", { name: /^Arrastar parada 3 / }).focus();
   await page.keyboard.press("Space");
-  await expect(liveRegion).toContainText("selecionada, na posição 3");
-  await page.keyboard.press("ArrowUp");
-  await expect(liveRegion).toContainText("sobre a posição 2");
+  // O anúncio de "pegou" é logo trocado pelo de "sobre a posição 3".
+  await expect(liveRegion).toContainText(/selecionada, na posição 3|sobre a posição 3/);
+  // Logo depois de pegar, o @dnd-kit ainda mede as posições e ignora a seta: tenta de novo até
+  // o anúncio confirmar a posição nova.
+  await expect(async () => {
+    await page.keyboard.press("ArrowUp");
+    await expect(liveRegion).toContainText("sobre a posição 2", { timeout: 1_000 });
+  }).toPass({ timeout: 10_000 });
   await page.keyboard.press("Space");
   await expect(page.getByText("versão 3")).toBeVisible();
   expect(await stopCustomers(page)).toEqual(["Mercadinho Tibério", "Cantina da Escola Dom Pedro", "Açougue Boi Gordo"]);
