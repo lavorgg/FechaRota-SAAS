@@ -42,6 +42,15 @@ export function normalizePhoneBR(input: string): NormalizePhoneResult {
   return { ok: true, phone: `55${digits}` };
 }
 
+/** Exibição: "5516999990001" -> "(16) 99999-0001"; "551633330001" -> "(16) 3333-0001". */
+export function formatPhoneBR(phone: string): string {
+  const digits = onlyDigits(phone);
+  const local = digits.startsWith("55") && (digits.length === 12 || digits.length === 13) ? digits.slice(2) : digits;
+  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  return phone;
+}
+
 export const BRAZILIAN_STATES = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA",
   "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
