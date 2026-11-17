@@ -113,6 +113,14 @@ Estas regras vêm da seção 3 da especificação e são verificadas por teste o
 - **Importação por CSV** de clientes e produtos: modelo para download, pré-visualização, envio em lotes de 200 linhas e relatório por linha. Aceita arquivos do Excel (`;` e Windows-1252). Linha com SKU ou CPF/CNPJ já cadastrado é recusada.
 - **Buscar CEP** consulta o ViaCEP direto do navegador, com limite de 3 segundos. Se falhar, o endereço é preenchido à mão.
 
+## Rotas e romaneios (Fase 4)
+
+- **Montar rota** em `/app/rotas`, na data do seletor do topo: os pedidos pendentes sem rota aparecem agrupados por cidade e bairro (pela chave normalizada, então "Centro", "centro " e "CENTRO" são um bairro só), com quantidade de pedidos, peso estimado, volumes (itens dos pedidos) e valor. Marque o bairro inteiro ou abra o bairro e escolha pedido a pedido. Escolha motorista (só MOTORISTA ativo) e veículo; peso acima da capacidade do veículo gera aviso, não bloqueio.
+- **Ordem das paradas**: a inicial é por bairro, rua e número. É uma ordenação simples, não otimização de trajeto. Em `/app/rotas/[id]` dá para arrastar (mouse, toque ou teclado: espaço pega, setas movem, espaço solta) ou usar os botões subir e descer. Cada mudança é gravada na hora e confere a versão da rota.
+- **Google Maps**: um botão com as paradas na ordem, partindo do endereço do depósito (cadastrado em `/app/empresa`). Rota com mais de 10 paradas é dividida em trechos, um botão por trecho; cada trecho começa na última parada do anterior.
+- **Liberar para carga** congela a rota, passa os pedidos para "Em rota" e libera a impressão. **Reabrir** é só do ADMIN, antes de o motorista iniciar, com motivo opcional na auditoria. **Excluir** só vale para rascunho: os pedidos voltam para "sem rota" e o código não é reaproveitado.
+- **Romaneios** de carga e de entrega em `/app/rotas/[id]/romaneio-carga` e `/romaneio-entrega`: A4 retrato, cabeçalho (empresa, código e versão da rota, data, motorista, veículo, data e hora da geração) repetido em toda página, uma parada nunca quebra entre páginas, tudo legível em preto e branco. No Chrome, "Salvar como PDF" gera o arquivo. O E2E grava os dois PDFs em `test-results/`.
+
 ## Decisões da Fase 1
 
 ### Serwist com Turbopack

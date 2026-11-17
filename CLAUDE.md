@@ -81,16 +81,32 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Gerador concorrente | Trava a linha do contador de pedidos no início da transação | Dois geradores ao mesmo tempo passam um de cada vez |
 | Rótulo do filtro de bairro | Grafia mais usada; no empate, a com inicial maiúscula e acento | Agrupa pela chave normalizada (seção 4) |
 | Busca de CEP | No navegador, direto no ViaCEP | Na Fase 6, a CSP precisa liberar `connect-src https://viacep.com.br` |
+| Volumes no agrupador | Quantidade de itens (linhas) dos pedidos | **Decidido pelo dono do produto** |
+| Partida do Google Maps | Endereço do depósito (`Company.depot*`), editado em `/app/empresa`; sem ele, o Maps parte do aparelho | **Decidido pelo dono do produto** |
+| Excluir rota | Só em rascunho; pedidos voltam para "sem rota"; código não reaproveitado; auditado | **Decidido pelo dono do produto** |
+| Motivo ao reabrir rota | Opcional, gravado na auditoria | **Decidido pelo dono do produto** |
+| Paradas por link do Maps | 9 waypoints (10 paradas por trecho); cada trecho começa na última parada do anterior | Documentação do Google inacessível daqui: **valor não verificado**. Se um link abrir cortado, reduzir `MAPS_MAX_WAYPOINTS` |
+| Coordenadas no Maps | Do cadastro atual do cliente, só se o endereço do cadastro ainda bate com o do pedido | O pedido não guarda coordenadas |
+| Rota liberada | Nome, motorista e veículo também congelam | Seção 5.6: "congela a rota" |
+| Liberar | Exige ao menos 1 parada, motorista e veículo ativos; renumera as paradas 1..n | A numeração impressa não pode ter buraco |
+| Romaneio de carga | Nome e unidade do snapshot do pedido; SKU, peso e vasilhame do cadastro atual | `OrderItem` não guarda SKU, peso nem vasilhame |
+| Saldo de vasilhames no romaneio | Anterior à rota: movimentos da própria rota ficam de fora | Reimpressão depois das entregas mostra o mesmo saldo |
+| Boleto no romaneio | "BOLETO — não cobrar", como o "FATURADO — não cobrar" da especificação | Boleto também não é cobrado na entrega |
+| Observações do pedido | Saem no romaneio de entrega | Instruções de entrega ficam no pedido |
+| Impressão | Páginas dentro do painel; `@media print` esconde menu, topo e avisos | Prévia na tela e "Imprimir" no mesmo lugar |
+| Log de Server Actions no `next dev` | Desligado (`logging.serverFunctions: false`) | O Next 16 imprimia os argumentos, inclusive a senha do login |
 
 ## Perguntas em aberto para o dono do produto
 
 1. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
 2. **ADMIN na área do motorista (Fase 5).** A matriz dá ao ADMIN "ver suas rotas e finalizar entregas", mas rota só é atribuída a MOTORISTA. Hoje o ADMIN entra em `/motorista` e vê só rotas atribuídas a ele (nenhuma). Ele deveria poder finalizar entregas de qualquer rota (ex.: celular do motorista quebrou)?
-3. **Configurações da empresa.** Nenhuma fase lista a tela para editar nome, CNPJ, fuso, política de comprovante e retenção de arquivos, mas a matriz tem a permissão. Em qual fase entra?
+3. **Configurações da empresa.** A Fase 4 criou `/app/empresa` com nome, CNPJ, telefone e endereço do depósito. Fuso, política de comprovante e retenção de arquivos continuam sem tela. Em qual fase entram?
+4. **Rotas em rascunho na área do motorista (Fase 5).** Hoje `/motorista` lista todas as rotas do dia atribuídas ao motorista, inclusive rascunhos que ainda podem mudar. O motorista deve ver só rotas liberadas?
 
 ## Situação
 
 - **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
 - **Fase 2:** pronta. A limpeza do IndexedDB e o bloqueio de logout com entregas na fila entram com a fila (Fase 5). Rate limit dos endpoints do motorista entra com os endpoints (Fase 5).
-- **Fase 3:** pronta. O filtro "rota" da listagem de pedidos já existe, mas só terá rotas para mostrar a partir da Fase 4.
+- **Fase 3:** pronta.
+- **Fase 4:** pronta. PDFs dos romaneios gerados pelo E2E em `test-results/`.
 - Deixados para a fase que os consome: cálculo do fechamento (Fase 6) e lógica da fila offline (Fase 5).
