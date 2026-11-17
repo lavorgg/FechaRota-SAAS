@@ -14,7 +14,7 @@ async function asExpedicao(page: Page) {
 test("menu da expedição tem os cadastros", async ({ page }) => {
   await asExpedicao(page);
   const menu = page.getByRole("list", { name: "Menu principal" });
-  await expect(menu.getByRole("link")).toHaveText(["Dashboard", "Pedidos", "Clientes", "Produtos", "Veículos"]);
+  await expect(menu.getByRole("link")).toHaveText(["Dashboard", "Pedidos", "Rotas", "Clientes", "Produtos", "Veículos"]);
 });
 
 test("veículo: cadastra, recusa placa repetida e inativa", async ({ page }) => {

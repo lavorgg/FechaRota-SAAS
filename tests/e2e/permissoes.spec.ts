@@ -11,7 +11,7 @@ async function menuItems(page: Page): Promise<string[]> {
 test("ADMIN: menu completo; acessa também a área do motorista", async ({ page }) => {
   await login(page, USERS.admin);
   await expect(page).toHaveURL(/\/app\/dashboard$/);
-  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Clientes", "Produtos", "Veículos", "Usuários"]);
+  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Rotas", "Clientes", "Produtos", "Veículos", "Usuários", "Empresa"]);
 
   const users = await page.goto("/app/usuarios");
   expect(users?.status()).toBe(200);
@@ -25,7 +25,7 @@ test("ADMIN: menu completo; acessa também a área do motorista", async ({ page 
 test("EXPEDICAO: sem usuários no menu, /app/usuarios não existe e não entra na área do motorista", async ({ page }) => {
   await login(page, USERS.expedicao);
   await expect(page).toHaveURL(/\/app\/dashboard$/);
-  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Clientes", "Produtos", "Veículos"]);
+  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Rotas", "Clientes", "Produtos", "Veículos"]);
 
   // O painel tem estado de carregamento (streaming): a página responde 200 e mostra o
   // "não encontrada" sem nenhum dado de usuários.
