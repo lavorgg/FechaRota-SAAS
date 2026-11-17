@@ -110,3 +110,11 @@ export function calcSubtotalCents(quantityMilli: number, unitPriceCents: number)
 export function calcOrderTotalCents(items: ReadonlyArray<{ quantityMilli: number; unitPriceCents: number }>): number {
   return items.reduce((sum, item) => sum + calcSubtotalCents(item.quantityMilli, item.unitPriceCents), 0);
 }
+
+/** Milésimos -> texto para campo de formulário, sem milhar e sem zeros à direita: 2750 -> "2,75". */
+export function milliToInput(milli: number): string {
+  if (!Number.isSafeInteger(milli) || milli < 0) throw new Error("milliToInput exige um inteiro não negativo.");
+  const whole = Math.floor(milli / 1000);
+  const fraction = String(milli % 1000).padStart(3, "0").replace(/0+$/, "");
+  return fraction ? `${whole},${fraction}` : String(whole);
+}

@@ -142,3 +142,13 @@ describe("calcOrderTotalCents", () => {
     expect(calcOrderTotalCents([])).toBe(0);
   });
 });
+
+describe("milliToInput", () => {
+  it("formata para o campo e volta igual", async () => {
+    const { milliToInput } = await import("./quantity");
+    for (const [milli, text] of [[1000, "1"], [2750, "2,75"], [1050, "1,05"], [1, "0,001"], [1500000, "1500"]] as const) {
+      expect(milliToInput(milli)).toBe(text);
+      expect(parseQuantityToMilli(text)).toEqual({ ok: true, milli });
+    }
+  });
+});

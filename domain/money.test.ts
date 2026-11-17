@@ -69,3 +69,13 @@ describe("formatCents", () => {
     }
   });
 });
+
+describe("centsToInput", () => {
+  it("formata para o campo e volta igual", async () => {
+    const { centsToInput } = await import("./money");
+    for (const [cents, text] of [[0, "0,00"], [5, "0,05"], [549, "5,49"], [123456, "1234,56"]] as const) {
+      expect(centsToInput(cents)).toBe(text);
+      expect(parseBRLToCents(text)).toEqual({ ok: true, cents });
+    }
+  });
+});

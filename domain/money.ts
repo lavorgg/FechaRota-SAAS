@@ -49,3 +49,9 @@ export function parseBRLToCents(input: string): ParseCentsResult {
   }
   return { ok: true, cents };
 }
+
+/** Centavos -> texto para campo de formulário, sem "R$" nem milhar: 123456 -> "1234,56". */
+export function centsToInput(cents: number): string {
+  if (!Number.isSafeInteger(cents) || cents < 0) throw new Error("centsToInput exige centavos não negativos.");
+  return `${Math.floor(cents / 100)},${String(cents % 100).padStart(2, "0")}`;
+}
