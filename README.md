@@ -4,7 +4,7 @@ SaaS B2B de romaneio de carga, sequência de entregas e comprovante de entrega p
 
 A especificação completa está em [`docs/especificacao-mvp-v3.md`](docs/especificacao-mvp-v3.md). Os comentários do código citam as seções dela ("seção 3.4").
 
-**Situação:** Fases 1 e 2 prontas no código: fundação, login, sessões, cadastro de empresa, gestão de usuários, matriz de permissões, rate limit, layout do painel e do motorista e dashboard. Falta o deploy de preview na Vercel, que depende das contas externas (veja "Deploy de preview na Vercel"). Cadastros, pedidos, rotas e entregas vêm nas próximas fases.
+**Situação:** Fases 1, 2 e 3 prontas no código: fundação, login e permissões, dashboard, cadastros (clientes, produtos, veículos, usuários), importação por CSV, lançamento rápido de pedidos, pedidos recorrentes e gerador. Falta o deploy de preview na Vercel, que depende das contas externas (veja "Deploy de preview na Vercel"). Rotas, romaneios, app do motorista e fechamento vêm nas próximas fases.
 
 ## O que o produto não é
 
@@ -103,6 +103,15 @@ Estas regras vêm da seção 3 da especificação e são verificadas por teste o
 - **Rate limit** (`lib/rate-limit`): login com 10 tentativas por e-mail + IP e 100 por IP em 15 minutos (login certo zera a contagem do e-mail), cadastro de empresa com 5 por IP por hora. As chaves vão para o Redis como hash.
 - **Plano em atraso ou cancelado** (`PAST_DUE`, `CANCELED`): o painel mostra o aviso e todas as alterações são recusadas no servidor.
 - **Usuários:** o ADMIN cria e promove qualquer papel, inclusive ADMIN. Ninguém muda o próprio papel nem se desativa, e a empresa nunca fica sem ADMIN ativo (inclusive com duas alterações simultâneas). Troca de papel, desativação e nova senha encerram as sessões do usuário. Tudo vai para a auditoria, sem senha.
+
+## Cadastros e pedidos (Fase 3)
+
+- **Lançamento rápido** em `/app/pedidos`: tecla `N` abre a gaveta. Busque o cliente (nome, bairro ou telefone, sem acento) e tecle `Enter`. Na busca de produto, `Enter` adiciona com quantidade 1; `Tab` vai para a quantidade e `Enter` lá adiciona. `Ctrl+Enter` salva e já abre o próximo pedido. Preço e total são recalculados no servidor.
+- **Segundo pedido do cliente no mesmo dia** pede confirmação.
+- **Pedidos recorrentes**: criados pelo lançamento rápido ("Salvar também como pedido recorrente") ou na tela do cliente, onde também se editam, pausam até uma data e desativam. O botão "Gerar recorrentes para [data]" (em Pedidos e no alerta do dashboard) cria os pedidos do dia numa transação. Rodar de novo não duplica. Template com cliente ou produto inativo é ignorado e listado com o motivo.
+- **Reagendar** um pedido não entregue cria um pedido novo na data escolhida, ligado ao original, que continua como não entregue.
+- **Importação por CSV** de clientes e produtos: modelo para download, pré-visualização, envio em lotes de 200 linhas e relatório por linha. Aceita arquivos do Excel (`;` e Windows-1252). Linha com SKU ou CPF/CNPJ já cadastrado é recusada.
+- **Buscar CEP** consulta o ViaCEP direto do navegador, com limite de 3 segundos. Se falhar, o endereço é preenchido à mão.
 
 ## Decisões da Fase 1
 

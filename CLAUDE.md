@@ -68,16 +68,29 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Fuso no cadastro | Lista dos 4 fusos do Brasil | `Company.timezone` precisa ser definido em algum lugar |
 | E-mail | Sempre minúsculo, garantido também por CHECK no banco | Evita duas contas para o mesmo e-mail |
 | `@hookform/resolvers` | 5.9.2 | A linha 7.x tem semanas de vida e trocou de versão maior duas vezes em um mês |
+| Reagendar | Cria pedido novo ligado ao original (`rescheduledFromOrderId`, único); o original fica `NAO_ENTREGUE`, que passa a ser final | **Decidido pelo dono do produto** (comprovante é um por pedido) |
+| Gerador com produto inativo | Template ignorado inteiro, com o motivo | **Decidido pelo dono do produto** |
+| CSV com SKU ou CPF/CNPJ repetido | Linha recusada; nada existente é alterado | **Decidido pelo dono do produto** |
+| Tela de templates | Dentro do cliente: criar, editar itens, pausar até uma data, desativar | **Decidido pelo dono do produto** |
+| CPF/CNPJ | Único por empresa também no cadastro manual | Mesma regra da importação |
+| Busca sem acento | Coluna `searchText` normalizada, mantida pelo app; busca exige todos os pedaços digitados | Sem extensão do Postgres; funciona igual no Neon e no Supabase |
+| Catálogo no lançamento rápido | Produtos ativos vão para o navegador; a busca de produto é local | Resposta imediata ao digitar; preço é recalculado no servidor |
+| Mudar data de pedido de recorrente | Proibido: cancelar e lançar avulso | Mover a data faria o gerador criar outro pedido na data original |
+| Editar pedido pendente | A cópia do endereço é atualizada com o cadastro atual | Pedido ainda não foi carregado; o romaneio sai com o endereço corrigido |
+| Segundo pedido no dia | Permitido com confirmação (código `CONFIRMACAO` na action) | Seção 5.5 |
+| Gerador concorrente | Trava a linha do contador de pedidos no início da transação | Dois geradores ao mesmo tempo passam um de cada vez |
+| Rótulo do filtro de bairro | Grafia mais usada; no empate, a com inicial maiúscula e acento | Agrupa pela chave normalizada (seção 4) |
+| Busca de CEP | No navegador, direto no ViaCEP | Na Fase 6, a CSP precisa liberar `connect-src https://viacep.com.br` |
 
 ## Perguntas em aberto para o dono do produto
 
-1. **Reagendamento (Fase 3).** A seção 3.8 diz `NAO_ENTREGUE → PENDENTE` no mesmo pedido, mas o modelo tem `rescheduledFromOrderId` (pedido novo) e o comprovante é único por pedido. Reagendar no mesmo pedido impede o segundo comprovante. Proposta: criar pedido novo ligado ao original, que continua `NAO_ENTREGUE`.
-2. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
-3. **ADMIN na área do motorista (Fase 5).** A matriz dá ao ADMIN "ver suas rotas e finalizar entregas", mas rota só é atribuída a MOTORISTA. Hoje o ADMIN entra em `/motorista` e vê só rotas atribuídas a ele (nenhuma). Ele deveria poder finalizar entregas de qualquer rota (ex.: celular do motorista quebrou)?
-4. **Configurações da empresa.** Nenhuma fase lista a tela para editar nome, CNPJ, fuso, política de comprovante e retenção de arquivos, mas a matriz tem a permissão. Em qual fase entra?
+1. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
+2. **ADMIN na área do motorista (Fase 5).** A matriz dá ao ADMIN "ver suas rotas e finalizar entregas", mas rota só é atribuída a MOTORISTA. Hoje o ADMIN entra em `/motorista` e vê só rotas atribuídas a ele (nenhuma). Ele deveria poder finalizar entregas de qualquer rota (ex.: celular do motorista quebrou)?
+3. **Configurações da empresa.** Nenhuma fase lista a tela para editar nome, CNPJ, fuso, política de comprovante e retenção de arquivos, mas a matriz tem a permissão. Em qual fase entra?
 
 ## Situação
 
 - **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
-- **Fase 2:** pronta. O botão "gerar" do alerta de recorrentes no dashboard entra com o gerador (Fase 3). A limpeza do IndexedDB e o bloqueio de logout com entregas na fila entram com a fila (Fase 5). Rate limit dos endpoints do motorista entra com os endpoints (Fase 5).
+- **Fase 2:** pronta. A limpeza do IndexedDB e o bloqueio de logout com entregas na fila entram com a fila (Fase 5). Rate limit dos endpoints do motorista entra com os endpoints (Fase 5).
+- **Fase 3:** pronta. O filtro "rota" da listagem de pedidos já existe, mas só terá rotas para mostrar a partir da Fase 4.
 - Deixados para a fase que os consome: cálculo do fechamento (Fase 6) e lógica da fila offline (Fase 5).
