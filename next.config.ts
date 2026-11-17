@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    // Navegadores pedem /favicon.ico por conta própria, mesmo com <link rel="icon">.
+    return [{ source: "/favicon.ico", destination: "/icons/favicon-48.png" }];
+  },
   async headers() {
     return [
       {
