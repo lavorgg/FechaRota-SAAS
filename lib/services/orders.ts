@@ -457,6 +457,34 @@ export type OrderFilterOptions = {
   routes: Array<{ id: string; code: string; name: string }>;
 };
 
+/** Grafia "bem escrita": inicial maiúscula sem estar toda em maiúsculas, e com acento quando houver. */
+function spellingScore(text: string): number {
+  const trimmed = text.trim();
+  const titleLike = trimmed.charAt(0) === trimmed.charAt(0).toUpperCase() && trimmed !== trimmed.toUpperCase() ? 2 : 0;
+  const accented = /[^\u0000-\u007f]/.test(trimmed) ? 1 : 0;
+  return titleLike + accented;
+}
+
+/**
+ * Opções do filtro de bairro: uma por chave normalizada (seção 4), com a grafia original
+ * mais usada; no empate, a mais bem escrita ("Centro" ganha de "CENTRO" e de "centro ").
+ */
+export function neighborhoodOptions(
+  groups: ReadonlyArray<{ deliveryCityKey: string; deliveryNeighborhoodKey: string; deliveryCity: string; deliveryNeighborhood: string; _count: { _all: number } }>,
+): Array<{ value: string; label: string }> {
+  const best = new Map<string, { label: string; count: number; score: number }>();
+  for (const group of groups) {
+    const value = neighborhoodFilterValue(group.deliveryCityKey, group.deliveryNeighborhoodKey);
+    const label = `${group.deliveryNeighborhood.trim()} · ${group.deliveryCity.trim()}`;
+    const score = spellingScore(group.deliveryNeighborhood) * 10 + spellingScore(group.deliveryCity);
+    const count = group._count._all;
+    const current = best.get(value);
+    const better = !current || count > current.count || (count === current.count && (score > current.score || (score === current.score && label < current.label)));
+    if (better) best.set(value, { label, count, score });
+  }
+  return [...best.entries()].map(([value, { label }]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+}
+
 /** Valor do filtro de bairro: cidade e bairro normalizados, juntos. */
 export function neighborhoodFilterValue(cityKey: string, neighborhoodKey: string): string {
   return `${cityKey}|${neighborhoodKey}`;
@@ -509,10 +537,9 @@ export async function listOrders(
       take: ORDERS_PAGE_SIZE,
     }),
     db.order.groupBy({
-      by: ["deliveryCityKey", "deliveryNeighborhoodKey"],
+      by: ["deliveryCityKey", "deliveryNeighborhoodKey", "deliveryCity", "deliveryNeighborhood"],
       where: { deliveryDate },
-      _min: { deliveryCity: true, deliveryNeighborhood: true },
-      orderBy: [{ deliveryCityKey: "asc" }, { deliveryNeighborhoodKey: "asc" }],
+      _count: { _all: true },
     }),
     db.route.findMany({ where: { deliveryDate }, select: { id: true, code: true, name: true }, orderBy: { code: "asc" } }),
   ]);
@@ -540,14 +567,7 @@ export async function listOrders(
       cancelReason: row.cancelReason,
       invoiceNumber: row.invoiceNumber,
     })),
-    options: {
-      // Agrupado pela chave normalizada; mostra uma das grafias originais (seção 4).
-      neighborhoods: neighborhoods.map((group) => ({
-        value: neighborhoodFilterValue(group.deliveryCityKey, group.deliveryNeighborhoodKey),
-        label: `${group._min.deliveryNeighborhood ?? group.deliveryNeighborhoodKey} · ${group._min.deliveryCity ?? group.deliveryCityKey}`,
-      })),
-      routes,
-    },
+    options: { neighborhoods: neighborhoodOptions(neighborhoods), routes },
   };
 }
 

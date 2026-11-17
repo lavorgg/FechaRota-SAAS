@@ -2,6 +2,7 @@ import { AlertTriangleIcon, CalendarClockIcon, PackageXIcon, RouteIcon } from "l
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { GenerateRecurringButton } from "@/components/pedidos/generate-recurring-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DAY_OF_WEEK_LABELS, dayOfWeekOfDateString, formatDateString } from "@/domain/dates";
@@ -9,6 +10,8 @@ import { formatCents } from "@/domain/money";
 import { ORDER_STATUSES, ORDER_STATUS_LABELS } from "@/domain/order-status";
 import { ROUTE_STATUSES, ROUTE_STATUS_LABELS } from "@/domain/route-status";
 import { requirePagePermission, serviceContext } from "@/lib/auth/current";
+import { can } from "@/lib/auth/permissions";
+import { planAllowsWrite } from "@/lib/auth/plan";
 import { resolveSelectedDate } from "@/lib/selected-date";
 import { getDashboard } from "@/lib/services/dashboard";
 
@@ -120,6 +123,11 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app/da
             {alerts.templatesNotGenerated.length > 0 && (
               <AlertItem icon={<CalendarClockIcon className="size-5" aria-hidden />} title={`Pedidos recorrentes de ${weekday.toLowerCase()} ainda não gerados`} count={alerts.templatesNotGenerated.length}>
                 <p className="text-sm text-muted-foreground">{alerts.templatesNotGenerated.map((t) => t.customerName).join(", ")}</p>
+                {can(session.user.role, "pedidos.gerenciar") && (
+                  <div className="pt-1">
+                    <GenerateRecurringButton date={date} disabled={!planAllowsWrite(session.company.planStatus)} />
+                  </div>
+                )}
               </AlertItem>
             )}
             {summary.pendingWithoutRoute > 0 && (

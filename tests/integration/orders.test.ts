@@ -232,3 +232,25 @@ describe("listagem", () => {
     expect((await listOrders(contextOf(b.admin), tomorrow, listOrdersSchema.parse({}))).total).toBe(0);
   });
 });
+
+describe("opções do filtro de bairro", () => {
+  it("uma por chave normalizada, com a grafia mais usada", async () => {
+    const { neighborhoodOptions } = await import("@/lib/services/orders");
+    const group = (neighborhood: string, count: number, city = "Ribeirão Preto", cityKey = "ribeirao preto") => ({
+      deliveryCityKey: cityKey,
+      deliveryNeighborhoodKey: "centro",
+      deliveryCity: city,
+      deliveryNeighborhood: neighborhood,
+      _count: { _all: count },
+    });
+    expect(neighborhoodOptions([group("CENTRO", 1), group("Centro", 3), group("centro ", 1), group("Centro", 2, "Sertãozinho", "sertaozinho")])).toEqual([
+      { value: "ribeirao preto|centro", label: "Centro · Ribeirão Preto" },
+      { value: "sertaozinho|centro", label: "Centro · Sertãozinho" },
+    ]);
+    // Empate na contagem: ganha a grafia mais bem escrita.
+    expect(neighborhoodOptions([group("CENTRO", 2), group("Centro", 2), group("Centro", 1, "Sertaozinho", "sertaozinho"), group("Centro", 1, "Sertãozinho", "sertaozinho")])).toEqual([
+      { value: "ribeirao preto|centro", label: "Centro · Ribeirão Preto" },
+      { value: "sertaozinho|centro", label: "Centro · Sertãozinho" },
+    ]);
+  });
+});

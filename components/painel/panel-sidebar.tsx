@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboardIcon, TruckIcon, UsersIcon } from "lucide-react";
+import { CarFrontIcon, ClipboardListIcon, LayoutDashboardIcon, PackageIcon, StoreIcon, TruckIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 
@@ -21,6 +21,10 @@ import type { NavIcon, NavItem } from "./nav";
 
 const ICONS: Record<NavIcon, typeof LayoutDashboardIcon> = {
   dashboard: LayoutDashboardIcon,
+  pedidos: ClipboardListIcon,
+  clientes: StoreIcon,
+  produtos: PackageIcon,
+  veiculos: CarFrontIcon,
   usuarios: UsersIcon,
 };
 
