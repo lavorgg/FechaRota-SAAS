@@ -2,7 +2,12 @@ import path from "node:path";
 
 import { defineConfig } from "vitest/config";
 
-const alias = { "@": path.resolve(import.meta.dirname) };
+const alias = {
+  "@": path.resolve(import.meta.dirname),
+  // "server-only" lança erro fora do servidor do Next. Nos testes, os módulos de servidor
+  // rodam em Node puro, então o import vira um módulo vazio.
+  "server-only": path.resolve(import.meta.dirname, "tests/support/empty-module.ts"),
+};
 
 export default defineConfig({
   resolve: { alias },
