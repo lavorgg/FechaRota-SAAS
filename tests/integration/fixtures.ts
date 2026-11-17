@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 
 import { dateStringToDbDate } from "@/domain/dates";
+import { customerSearchText, productSearchText } from "@/domain/search";
 import { COUNTER_KEYS } from "@/lib/counters";
 import { prisma } from "@/lib/db";
 import { getTenantDb } from "@/lib/tenant-db";
@@ -47,14 +48,15 @@ export async function createCompanyFixture(label: string) {
       state: "SP",
       neighborhoodKey: "centro",
       cityKey: "ribeirao preto",
+      searchText: customerSearchText({ name: `Cliente ${label}`, neighborhood: "Centro", city: "Ribeirão Preto" }),
       defaultPaymentMethod: "DINHEIRO",
     },
   });
   const container = await db.product.create({
-    data: { companyId, sku: "CAIXA", name: "Caixa retornável", unit: "UN", priceCents: 2500, isReturnableContainer: true },
+    data: { companyId, sku: "CAIXA", name: "Caixa retornável", unit: "UN", priceCents: 2500, isReturnableContainer: true, searchText: productSearchText({ sku: "CAIXA", name: "Caixa retornável" }) },
   });
   const product = await db.product.create({
-    data: { companyId, sku: "LEITE-1L", name: "Leite 1L", unit: "UN", priceCents: 549, weightKg: "1.050", containerProductId: container.id, unitsPerContainer: 12 },
+    data: { companyId, sku: "LEITE-1L", name: "Leite 1L", unit: "UN", priceCents: 549, weightKg: "1.050", containerProductId: container.id, unitsPerContainer: 12, searchText: productSearchText({ sku: "LEITE-1L", name: "Leite 1L" }) },
   });
   const template = await db.recurringOrderTemplate.create({
     data: {
