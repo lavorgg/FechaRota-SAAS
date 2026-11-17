@@ -22,11 +22,9 @@ export default async function PanelLayout({ children }: LayoutProps<"/app">) {
 
   return (
     <SidebarProvider>
-      <Suspense>
-        <PanelSidebar items={items} companyName={company.name} />
-      </Suspense>
+      <PanelSidebar items={items} companyName={company.name} />
       <SidebarInset>
-        <header className="sticky top-0 z-10 flex h-14 min-w-0 shrink-0 items-center gap-1 border-b bg-background px-2 sm:gap-2 sm:px-3">
+        <header className="sticky top-0 z-10 flex h-14 min-w-0 shrink-0 items-center gap-1 border-b bg-background px-2 sm:gap-2 sm:px-3 print:hidden">
           <SidebarTrigger aria-label="Recolher ou abrir o menu" />
           <div aria-hidden className="mx-1 hidden h-5 w-px bg-border sm:block" />
           <Suspense>
@@ -37,7 +35,7 @@ export default async function PanelLayout({ children }: LayoutProps<"/app">) {
           </div>
         </header>
         {!planAllowsWrite(company.planStatus) && <ReadOnlyBanner />}
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">{children}</div>
+        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6 print:p-0">{children}</div>
       </SidebarInset>
       <DevProfileSwitcherSlot session={session} />
     </SidebarProvider>

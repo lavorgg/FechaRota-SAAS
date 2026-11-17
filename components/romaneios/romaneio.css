@@ -1,0 +1,238 @@
+/*
+ * Romaneios (seção 5.6): A4, legíveis em preto e branco. Nada depende de cor de fundo:
+ * a hierarquia vem de borda, peso e tamanho da fonte. Tudo fica sob .manifest, para não
+ * vazar para o resto do painel.
+ */
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm 10mm 12mm;
+  }
+}
+
+.manifest {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  background: #fff;
+  color: #000;
+  font-size: 10pt;
+  line-height: 1.35;
+}
+
+@media screen {
+  .manifest {
+    padding: 10mm;
+    border: 1px solid #d4d4d4;
+    border-radius: 0.75rem;
+  }
+}
+
+.manifest table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* A tabela externa repete o cabeçalho em toda página impressa. */
+.manifest-sheet > thead {
+  display: table-header-group;
+}
+
+.manifest-sheet > thead > tr > td,
+.manifest-sheet > tbody > tr > td.manifest-cell {
+  padding: 0;
+  border: 0;
+}
+
+/* :where() zera a especificidade: as classes abaixo podem dar margem ao próprio parágrafo. */
+.manifest :where(p) {
+  margin: 0;
+}
+
+.manifest-header {
+  border-bottom: 2px solid #000;
+  padding-bottom: 5pt;
+  margin-bottom: 8pt;
+}
+
+.manifest-header__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12pt;
+}
+
+.manifest-header__title {
+  max-width: 60%;
+  text-align: right;
+}
+
+.manifest-route-name {
+  font-weight: 700;
+}
+
+.manifest-company {
+  font-size: 12pt;
+  font-weight: 700;
+}
+
+.manifest-title {
+  font-size: 15pt;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.manifest-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, auto));
+  justify-content: space-between;
+  gap: 3pt 14pt;
+  margin: 6pt 0 0;
+}
+
+.manifest-facts dt {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.manifest-facts dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.manifest-lines th,
+.manifest-lines td {
+  border: 1px solid #000;
+  padding: 3pt 5pt;
+  text-align: left;
+  vertical-align: top;
+}
+
+.manifest-lines th {
+  font-size: 8pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.manifest .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.manifest-lines .manifest-total td {
+  border-top: 2.5px solid #000;
+  font-weight: 700;
+}
+
+.manifest-section-title {
+  margin: 12pt 0 4pt;
+  font-size: 11pt;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.manifest-note {
+  margin-top: 3pt;
+  font-size: 8.5pt;
+}
+
+.manifest-signatures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24pt;
+  margin-top: 36pt;
+  break-inside: avoid;
+}
+
+.manifest-signature {
+  border-top: 1px solid #000;
+  padding-top: 3pt;
+  font-size: 9pt;
+}
+
+/* Romaneio de Entrega: uma parada por bloco, sem quebra no meio. */
+.manifest-stop {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.manifest-stop > td {
+  padding: 0 0 8pt;
+}
+
+.stop-card {
+  border: 1.5px solid #000;
+  padding: 6pt 8pt;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.stop-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8pt;
+  border-bottom: 1px solid #000;
+  padding-bottom: 3pt;
+  margin-bottom: 4pt;
+}
+
+.stop-number {
+  font-size: 14pt;
+  font-weight: 800;
+}
+
+.stop-customer {
+  font-size: 11pt;
+  font-weight: 700;
+}
+
+.stop-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 15rem);
+  gap: 6pt 12pt;
+}
+
+.stop-label {
+  font-weight: 700;
+}
+
+.stop-items {
+  margin-top: 4pt;
+}
+
+.stop-items th,
+.stop-items td {
+  border-bottom: 1px solid #000;
+  padding: 1.5pt 4pt;
+  text-align: left;
+}
+
+.stop-items th {
+  font-size: 7.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stop-pay {
+  border: 2px solid #000;
+  padding: 4pt 6pt;
+  font-weight: 700;
+}
+
+.stop-pay__amount {
+  font-size: 13pt;
+  font-weight: 800;
+}
+
+.stop-receipt {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16pt;
+  margin-top: 18pt;
+}

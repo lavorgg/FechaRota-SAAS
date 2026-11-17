@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type PlanningOrder, exceedsCapacity, groupByCityAndNeighborhood, orderWeight, suggestStopOrder, summarizeLoad } from "./route-planning";
+import { type PlanningOrder, exceedsCapacity, groupByCityAndNeighborhood, orderWeight, suggestRouteName, suggestStopOrder, summarizeLoad } from "./route-planning";
 import { preferredOf, preferredSpelling } from "./spelling";
 
 let seq = 0;
@@ -91,5 +91,22 @@ describe("grafia preferida", () => {
     expect(preferredOf(["CENTRO", "Centro"])).toBe("Centro");
     expect(preferredOf(["Sertaozinho", "Sertãozinho"])).toBe("Sertãozinho");
     expect(preferredSpelling([])).toBe("");
+  });
+});
+
+describe("suggestRouteName", () => {
+  const place = (neighborhood: string, city: string) => ({ neighborhood, neighborhoodKey: neighborhood.trim().toLowerCase(), city, cityKey: city.toLowerCase() });
+
+  it("lista os bairros na grafia mais usada", () => {
+    expect(suggestRouteName([place("Centro", "Franca"), place("centro ", "Franca"), place("Centro", "Franca"), place("Estação", "Franca")])).toBe("Centro / Estação");
+  });
+
+  it("com mais de uma cidade, cada bairro leva a cidade", () => {
+    expect(suggestRouteName([place("Centro", "Franca"), place("Centro", "Batatais")])).toBe("Centro (Batatais) / Centro (Franca)");
+  });
+
+  it("corta no tamanho máximo do nome", () => {
+    expect(suggestRouteName([place("Bairro com nome bem comprido", "Franca"), place("Outro bairro comprido", "Franca")], 20)).toBe("Bairro com nome bem");
+    expect(suggestRouteName([])).toBe("");
   });
 });

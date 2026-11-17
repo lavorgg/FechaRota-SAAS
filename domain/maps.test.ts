@@ -71,3 +71,11 @@ describe("buildMapsSegments", () => {
     );
   });
 });
+
+describe("addressLine sem espaços sobrando", () => {
+  it("apara e junta espaços da grafia original", () => {
+    expect(addressLine({ street: "Rua  Álvares Cabral", number: "88", neighborhood: "centro ", city: " Ribeirão Preto", state: "SP", zipCode: "14010080" })).toBe(
+      "Rua Álvares Cabral, 88, centro, Ribeirão Preto - SP, 14010-080",
+    );
+  });
+});

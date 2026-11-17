@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatWeightKg,
   type CargoItemInput,
   buildCargoManifest,
   calcContainersByOrder,
@@ -144,5 +145,15 @@ describe("calcItemWeightGrams", () => {
     expect(calcItemWeightGrams(12000, 1050)).toBe(12600);
     expect(calcItemWeightGrams(1, 1500)).toBe(2); // 1,5 g -> 2 g
     expect(calcItemWeightGrams(1, 1499)).toBe(1);
+  });
+});
+
+describe("formatWeightKg", () => {
+  it("mostra em kg com vírgula, sem zeros à direita", () => {
+    expect(formatWeightKg(924_310)).toBe("924,31 kg");
+    expect(formatWeightKg(1_050)).toBe("1,05 kg");
+    expect(formatWeightKg(500)).toBe("0,5 kg");
+    expect(formatWeightKg(0)).toBe("0 kg");
+    expect(formatWeightKg(1_234_567)).toBe("1.234,567 kg");
   });
 });

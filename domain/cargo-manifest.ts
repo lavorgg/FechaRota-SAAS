@@ -164,3 +164,9 @@ export function buildCargoManifest(items: ReadonlyArray<CargoItemInput>): CargoM
     orderCount: new Set(items.map((item) => item.orderId)).size,
   };
 }
+
+/** Peso para exibição: 924310 g -> "924,31 kg"; 500 g -> "0,5 kg". */
+export function formatWeightKg(grams: number): string {
+  if (!Number.isSafeInteger(grams) || grams < 0) throw new Error("Peso inválido.");
+  return `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 3 }).format(grams / 1000)} kg`;
+}

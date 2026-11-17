@@ -112,3 +112,13 @@ export function groupByCityAndNeighborhood(orders: ReadonlyArray<PlanningOrder>)
 export function exceedsCapacity(weightGrams: number, capacityKg: number | null): boolean {
   return capacityKg !== null && weightGrams > capacityKg * 1000;
 }
+
+/**
+ * Nome sugerido para a rota a partir dos pedidos escolhidos: os bairros, na grafia mais usada.
+ * Com mais de uma cidade, cada bairro leva a cidade junto ("Centro (Sertãozinho)").
+ */
+export function suggestRouteName(orders: ReadonlyArray<Pick<PlanningOrder, "city" | "cityKey" | "neighborhood" | "neighborhoodKey">>, maxLength = 80): string {
+  const groups = groupByCityAndNeighborhood(orders.map((order, index) => ({ ...order, id: String(index), orderNumber: index, customerName: "", street: "", number: "", totalCents: 0, items: [] })));
+  const parts = groups.flatMap((city) => city.neighborhoods.map((group) => (groups.length > 1 ? `${group.neighborhood} (${city.city})` : group.neighborhood)));
+  return parts.join(" / ").slice(0, maxLength).trim();
+}

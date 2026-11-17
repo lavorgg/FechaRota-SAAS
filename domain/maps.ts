@@ -49,6 +49,9 @@ export function buildMapsSegments(origin: MapsPlace | null, stops: ReadonlyArray
 
 /** Endereço em uma linha, como o Maps entende melhor. */
 export function addressLine(address: { street: string; number: string; neighborhood: string; city: string; state: string; zipCode: string }): string {
-  const cep = /^\d{8}$/.test(address.zipCode) ? `${address.zipCode.slice(0, 5)}-${address.zipCode.slice(5)}` : address.zipCode;
-  return `${address.street}, ${address.number}, ${address.neighborhood}, ${address.city} - ${address.state}, ${cep}`;
+  // O cadastro guarda a grafia original (ex.: "centro "); na linha impressa, sem espaço sobrando.
+  const clean = (text: string) => text.replace(/\s+/g, " ").trim();
+  const zip = clean(address.zipCode);
+  const cep = /^\d{8}$/.test(zip) ? `${zip.slice(0, 5)}-${zip.slice(5)}` : zip;
+  return `${clean(address.street)}, ${clean(address.number)}, ${clean(address.neighborhood)}, ${clean(address.city)} - ${clean(address.state)}, ${cep}`;
 }

@@ -31,7 +31,7 @@ export function DevProfileSwitcher({ targets, currentUserId }: { targets: Array<
   }
 
   return (
-    <div className="fixed right-3 bottom-3 z-50">
+    <div className="fixed right-3 bottom-3 z-50 print:hidden">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className="border-dashed border-amber-500 bg-amber-50 text-amber-950 shadow-sm" disabled={pending}>
