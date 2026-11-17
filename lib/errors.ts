@@ -2,7 +2,14 @@
 // Qualquer outro erro (Prisma, rede, bug) vira uma mensagem genérica na borda e nunca
 // chega à tela com detalhes internos (seção 0, regra 6).
 
-export type ServiceErrorCode = "NAO_ENCONTRADO" | "SEM_PERMISSAO" | "SOMENTE_LEITURA" | "CONFLITO" | "VALIDACAO";
+export type ServiceErrorCode =
+  | "NAO_ENCONTRADO"
+  | "SEM_PERMISSAO"
+  | "SOMENTE_LEITURA"
+  | "CONFLITO"
+  | "VALIDACAO"
+  /** A operação é válida, mas precisa da confirmação do usuário (ex.: segundo pedido no dia). */
+  | "CONFIRMACAO";
 
 export type FieldErrors = Record<string, string>;
 
@@ -24,6 +31,9 @@ export const MESSAGES = {
   sessionExpired: "Sua sessão expirou. Entre novamente.",
   unexpected: "Não foi possível concluir a operação. Tente novamente.",
   concurrentChange: "Outra pessoa alterou estes dados ao mesmo tempo. Recarregue a página e tente de novo.",
+  /** Seção 3.10. */
+  staleVersion: "Este registro foi alterado por outra pessoa. Recarregue a página.",
+  linkedRecords: "Não dá para excluir: há pedidos ou outros registros ligados. Inative em vez de excluir.",
 } as const;
 
 export function notFound(): ServiceError {

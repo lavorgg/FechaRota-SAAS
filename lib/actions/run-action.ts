@@ -11,7 +11,7 @@ import type { z } from "zod";
 import { type ServiceContext, assertCan, assertCanWrite } from "../auth/context";
 import { getCurrentSession, serviceContext } from "../auth/current";
 import type { Permission } from "../auth/permissions";
-import { type FieldErrors, MESSAGES, ServiceError } from "../errors";
+import { type FieldErrors, MESSAGES, ServiceError, type ServiceErrorCode } from "../errors";
 import { describeErrorForLog, zodFieldErrors } from "./errors";
 import type { ActionResult } from "./result";
 
@@ -21,10 +21,10 @@ export { zodFieldErrors } from "./errors";
 export const INVALID_DATA = "Confira os campos destacados.";
 
 /** Converte qualquer erro em resultado de action. Redirecionamentos do Next seguem adiante. */
-export function errorToResult(error: unknown, label: string): { ok: false; error: string; fieldErrors?: FieldErrors } {
+export function errorToResult(error: unknown, label: string): { ok: false; error: string; fieldErrors?: FieldErrors; code?: ServiceErrorCode } {
   unstable_rethrow(error);
   if (error instanceof ServiceError) {
-    return { ok: false, error: error.message, fieldErrors: error.fieldErrors };
+    return { ok: false, error: error.message, fieldErrors: error.fieldErrors, code: error.code };
   }
   console.error(`[acao:${label}] erro inesperado: ${describeErrorForLog(error)}`);
   return { ok: false, error: MESSAGES.unexpected };

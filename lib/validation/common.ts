@@ -3,7 +3,9 @@
 
 import { z } from "zod";
 
+import { isValidDateString } from "../../domain/dates";
 import { validateDocument } from "../../domain/document";
+import { parseBRLToCents } from "../../domain/money";
 import { normalizePhoneBR } from "../../domain/normalize";
 
 export const MIN_PASSWORD_LENGTH = 8;
@@ -81,3 +83,63 @@ export const timezoneSchema = z.enum(
   BRAZIL_TIMEZONES.map((tz) => tz.value) as [string, ...string[]],
   { error: "Escolha o fuso horário." },
 );
+
+/** Texto opcional: vazio vira null. */
+export function optionalText(max: number, tooLong = "Texto longo demais.") {
+  return z
+    .string()
+    .trim()
+    .max(max, tooLong)
+    .optional()
+    .nullable()
+    .transform((value) => (value ? value : null));
+}
+
+/** Data de calendário "AAAA-MM-DD". */
+export const dateStringSchema = z
+  .string({ error: "Informe a data." })
+  .refine((value) => isValidDateString(value), "Data inválida.");
+
+/** Dinheiro digitado ("12,50") -> centavos (seção 3.1). */
+export const moneySchema = z.string({ error: "Informe o valor." }).transform((value, ctx) => {
+  const result = parseBRLToCents(value);
+  if (!result.ok) {
+    ctx.addIssue({ code: "custom", message: result.error });
+    return z.NEVER;
+  }
+  return result.cents;
+});
+
+/** Dinheiro opcional: vazio vira null. */
+export const optionalMoneySchema = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((value, ctx) => {
+    if (!value || !value.trim()) return null;
+    const result = parseBRLToCents(value);
+    if (!result.ok) {
+      ctx.addIssue({ code: "custom", message: result.error });
+      return z.NEVER;
+    }
+    return result.cents;
+  });
+
+/** Inteiro positivo opcional digitado: vazio vira null. */
+export function optionalPositiveIntSchema(max: number, label: string) {
+  return z
+    .string()
+    .optional()
+    .nullable()
+    .transform((value, ctx) => {
+      if (!value || !value.trim()) return null;
+      const number = Number(value.trim());
+      if (!Number.isInteger(number) || number < 1 || number > max) {
+        ctx.addIssue({ code: "custom", message: `${label} deve ser um número inteiro entre 1 e ${max}.` });
+        return z.NEVER;
+      }
+      return number;
+    });
+}
+
+export const versionSchema = z.number({ error: "Versão inválida." }).int().min(1);
