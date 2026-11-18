@@ -35,6 +35,14 @@ export default defineConfig({
       testMatch: ["auth.spec.ts", "permissoes.spec.ts", "dashboard.spec.ts", "usuarios.spec.ts", "cadastros.spec.ts", "importacao.spec.ts", "pedidos.spec.ts", "rotas.spec.ts"],
       use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } },
     },
+    {
+      // Fluxo do motorista (Fase 5): muda a situação de pedidos de hoje, então roda depois de
+      // todos os outros projetos.
+      name: "entregas",
+      testMatch: ["entregas.spec.ts"],
+      dependencies: ["celular", "painel"],
+      use: { ...devices["Desktop Chrome"], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true },
+    },
   ],
   webServer: {
     command: `pnpm exec tsx tests/e2e/prepare.ts && pnpm build && pnpm exec next start -p ${PORT}`,
