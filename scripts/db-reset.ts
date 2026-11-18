@@ -7,7 +7,7 @@ import "dotenv/config";
 
 import { spawnSync } from "node:child_process";
 
-import { DeleteObjectsCommand, ListObjectsV2Command, S3Client } from "@aws-sdk/client-s3";
+import { DeleteObjectsCommand, ListObjectsV2Command, PutBucketCorsCommand, S3Client } from "@aws-sdk/client-s3";
 import { Client } from "pg";
 
 const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
@@ -40,6 +40,13 @@ async function resetDatabase(connectionString: string): Promise<void> {
   }
 }
 
+/**
+ * O celular envia fotos e assinatura direto ao storage (seção 5.7): o navegador só aceita se o
+ * bucket liberar a origem do app. Aqui, só as portas locais (dev 3000, E2E 3100). O CORS do R2
+ * de produção e preview é configurado no deploy (Fase 6).
+ */
+const LOCAL_APP_ORIGINS = ["http://localhost:3000", "http://localhost:3100", "http://127.0.0.1:3000", "http://127.0.0.1:3100"];
+
 async function emptyBucket(): Promise<number> {
   const bucket = process.env.S3_BUCKET;
   if (!bucket) throw new Error("S3_BUCKET não está definida.");
@@ -62,6 +69,12 @@ async function emptyBucket(): Promise<number> {
     }
     token = page.IsTruncated ? page.NextContinuationToken : undefined;
   } while (token);
+  await s3.send(
+    new PutBucketCorsCommand({
+      Bucket: bucket,
+      CORSConfiguration: { CORSRules: [{ AllowedOrigins: LOCAL_APP_ORIGINS, AllowedMethods: ["PUT", "GET"], AllowedHeaders: ["content-type"], MaxAgeSeconds: 600 }] },
+    }),
+  );
   s3.destroy();
   return deleted;
 }
@@ -78,7 +91,7 @@ async function main(): Promise<void> {
   await resetDatabase(directUrl.toString());
 
   const deleted = await emptyBucket();
-  console.log(`Bucket local "${process.env.S3_BUCKET}" esvaziado (${deleted} arquivo(s)).`);
+  console.log(`Bucket local "${process.env.S3_BUCKET}" esvaziado (${deleted} arquivo(s)) e com CORS para as portas locais.`);
 
   run("pnpm", ["exec", "prisma", "migrate", "deploy"]);
   run("pnpm", ["exec", "prisma", "db", "seed"]);
