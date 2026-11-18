@@ -99,6 +99,22 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | ADMIN em `/motorista` | Vê todas as rotas do dia e pode iniciar e finalizar entregas de qualquer uma | **Decidido pelo dono do produto** |
 | Rota em rascunho | Não aparece para o motorista | **Decidido pelo dono do produto** |
 | Plano em atraso | O motorista inicia rota já liberada e finaliza entregas normalmente | **Decidido pelo dono do produto** |
+| Página `/motorista` | Sem dado do usuário no HTML; o app busca na API ou lê do IndexedDB; navegação interna pelo `#` | O service worker guarda a página para abrir offline sem guardar dado de negócio (seção 3.13) |
+| Cache da página do motorista | Rede primeiro (4 s); guarda junto os arquivos `/_next/static` que ela cita; na instalação já baixa a página | Página e JS da mesma versão; o primeiro uso offline funciona |
+| IndexedDB | Um banco por usuário (`fecharota-motorista-{id}`); `localStorage` guarda só id, nome e empresa do último usuário | Celular compartilhado; abrir sem sinal |
+| Endpoints do motorista | Route Handlers `/api/motorista/*`; 401 pausa a fila; 408, 429, 5xx e rede são temporários; demais 4xx vão para "Precisa de atenção"; código `ARQUIVO` sobe os arquivos de novo | A fila precisa separar erro temporário de definitivo |
+| Rate limit do motorista | 120 requisições por minuto por usuário | Descarregar a fila de um dia sem sinal de uma vez |
+| Nome do recebedor | Obrigatório em entregue e parcial | "Nome do recebedor (documento opcional)" na seção 5.7 |
+| Pagamento após a entrega | Boleto e faturado: FATURADO; não entregue: NAO_RECEBIDO; com Pix: PIX_A_CONFERIR; só dinheiro: RECEBIDO; nada: NAO_RECEBIDO | A seção 5.8 só conta Pix depois da conferência |
+| Não entregue | Valor a cobrar do pedido não muda; quantidade entregue 0 | O fechamento só soma o que foi entregue |
+| Horário da entrega | O do celular, limitado ao horário do servidor | Relógio adiantado não grava entrega no futuro |
+| Um motorista, uma rota em andamento | "Iniciar" trava a linha do motorista na transação | Dois inícios simultâneos passam um de cada vez |
+| "Precisa de atenção" | "Tentar de novo" e "Descartar" (com confirmação; a parada volta a abrir no celular) | Nada é descartado sem o motorista pedir |
+| Logout do motorista | Bloqueado com entrega pendente ou em atenção, e sem conexão | Evita perder entrega e sessão aberta no servidor |
+| Assinatura | Recusa traço com menos de 80 px de tinta ou menor que 24 px | "Rejeitar assinatura vazia ou com traço insignificante" sem número na especificação |
+| Foto acima de 400 KB | Baixa a qualidade até 0,45 e depois reduz o lado em 20% (mínimo 640 px) | Meta de 400 KB da seção 5.7 |
+| Lighthouse PWA | Instalabilidade conferida no E2E pelo Chrome (`Page.getInstallabilityErrors`); só "in-incognito" é aceito | O Lighthouse 12 removeu a categoria PWA; todo contexto do Playwright é anônimo |
+| CORS do storage local | `db:reset` libera as portas 3000 e 3100 | Upload direto do navegador; o CORS do R2 é da Fase 6 |
 
 ## Perguntas em aberto para o dono do produto
 
@@ -107,7 +123,8 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 ## Situação
 
 - **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
-- **Fase 2:** pronta. A limpeza do IndexedDB e o bloqueio de logout com entregas na fila entram com a fila (Fase 5). Rate limit dos endpoints do motorista entra com os endpoints (Fase 5).
+- **Fase 2:** pronta.
 - **Fase 3:** pronta.
 - **Fase 4:** pronta. PDFs dos romaneios gerados pelo E2E em `test-results/`.
-- Deixados para a fase que os consome: cálculo do fechamento (Fase 6) e lógica da fila offline (Fase 5).
+- **Fase 5:** pronta. Teste em iPhone e Android reais depende do deploy de preview (checklist no README).
+- Deixados para a fase que os consome: cálculo do fechamento, CORS do R2 e limpeza de arquivos `PENDING` (Fase 6).

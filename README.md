@@ -121,6 +121,40 @@ Estas regras vêm da seção 3 da especificação e são verificadas por teste o
 - **Liberar para carga** congela a rota, passa os pedidos para "Em rota" e libera a impressão. **Reabrir** é só do ADMIN, antes de o motorista iniciar, com motivo opcional na auditoria. **Excluir** só vale para rascunho: os pedidos voltam para "sem rota" e o código não é reaproveitado.
 - **Romaneios** de carga e de entrega em `/app/rotas/[id]/romaneio-carga` e `/romaneio-entrega`: A4 retrato, cabeçalho (empresa, código e versão da rota, data, motorista, veículo, data e hora da geração) repetido em toda página, uma parada nunca quebra entre páginas, tudo legível em preto e branco. No Chrome, "Salvar como PDF" gera o arquivo. O E2E grava os dois PDFs em `test-results/`.
 
+## Área do motorista (Fase 5)
+
+- **Instalação:** a área `/motorista` é um app instalável (manifest com escopo `/motorista`). No Android aparece o botão "Instalar aplicativo"; no iPhone, "Como instalar no iPhone" leva às instruções (Compartilhar → Adicionar à Tela de Início). Aberto pelo navegador, um aviso fica visível: sem instalar, o celular pode apagar a rota salva.
+- **Sem sinal:** a página do app não leva dado nenhum do usuário. O service worker a guarda (rede primeiro, até 4 s) junto com os arquivos que ela cita, e a rota, as entregas e as fotos ficam no IndexedDB do celular, um banco por usuário. A navegação interna é pelo `#` da URL, então trocar de tela não depende de rede.
+- **Iniciar rota** precisa de internet: baixa a rota inteira (paradas, itens, valores, saldo de vasilhames). Depois, tudo funciona sem sinal.
+- **Comprovante:** entregue, parcial (quantidade por item, motivo da devolução e valor recalculado, que passa a ser o valor a cobrar do pedido) ou não entregue (motivo da lista). Recebimento em dinheiro e Pix, vasilhames deixados e recolhidos, nome do recebedor, assinatura no dedo e até 3 fotos (comprimidas no celular para menos de 400 KB). Confirmar grava no celular e mostra a próxima parada na hora.
+- **Envio:** a fila envia em ordem, ao abrir o app, quando a conexão volta, ao voltar para o app, em novas tentativas (5 s, 10 s, 20 s... até 5 min) e no "Sincronizar agora". Fotos e assinatura vão direto do celular para o storage. Reenviar a mesma entrega não grava nada novo. Recusa do servidor (ex.: rota reaberta) vai para "Precisa de atenção", com a mensagem; nada é descartado sem o motorista pedir.
+- **Sair** apaga os dados do usuário no celular e fica bloqueado enquanto houver entrega não enviada.
+- **ADMIN** vê em `/motorista` as rotas de todos os motoristas do dia e pode finalizar entregas (ex.: celular do motorista quebrou). Rota em rascunho não aparece. Plano em atraso não impede iniciar nem finalizar.
+- **Storage local:** o `pnpm db:reset` libera CORS no bucket para as portas 3000 e 3100. Rode-o de novo depois de atualizar o projeto.
+
+### Teste em celular de verdade
+
+O service worker e a câmera exigem HTTPS, e o celular precisa alcançar o storage. Por isso o teste em aparelho real é feito no **deploy de preview** (Vercel + Neon/Supabase + R2 + Upstash, passo a passo abaixo). No R2, libere CORS de `PUT` e `GET` para o domínio do preview.
+
+**Android (Chrome)**
+
+1. Abra o preview no Chrome e entre como `motorista1@exemplo.test` (senha `fecharota123`). No painel (outro aparelho ou computador), monte e libere uma rota para ele.
+2. Toque em "Instalar aplicativo" e confirme. Abra pelo ícone na tela inicial: o aviso de instalação some.
+3. Toque em "Iniciar rota". Em "Navegar", confira se o Google Maps abre no endereço; teste também Waze e WhatsApp.
+4. Finalize uma entrega completa com assinatura no dedo e uma foto pela câmera traseira.
+5. Ligue o modo avião. Feche o app pelo gerenciador de tarefas e abra de novo pelo ícone: a rota abre na parada seguinte.
+6. Ainda sem sinal: finalize uma entrega parcial e uma não entregue com foto. O indicador mostra "2 entregas aguardando envio". Tente "Sair": deve bloquear.
+7. Desligue o modo avião: em segundos o indicador vira "Tudo sincronizado". No painel, confira as situações dos pedidos.
+8. Gire o celular durante a assinatura: o desenho continua no lugar.
+
+**iPhone (Safari)**
+
+1. Abra o preview no Safari e entre como motorista. Toque em "Como instalar no iPhone" e siga as instruções (Compartilhar → Adicionar à Tela de Início).
+2. Abra pelo ícone e entre de novo (o app instalado tem armazenamento próprio).
+3. Repita os passos 3 a 8 do Android. No passo 5, use o modo avião e reabra o app pelo ícone.
+4. Confira a foto: tirada em pé, deve aparecer em pé na pré-visualização (orientação EXIF).
+5. Deixe o app em segundo plano com uma entrega na fila e sinal: ao voltar para o app, ele envia sozinho (o iPhone não envia com o app fechado).
+
 ## Decisões da Fase 1
 
 ### Serwist com Turbopack
