@@ -55,3 +55,15 @@ export function addressLine(address: { street: string; number: string; neighborh
   const cep = /^\d{8}$/.test(zip) ? `${zip.slice(0, 5)}-${zip.slice(5)}` : zip;
   return `${clean(address.street)}, ${clean(address.number)}, ${clean(address.neighborhood)}, ${clean(address.city)} - ${clean(address.state)}, ${cep}`;
 }
+
+/**
+ * O pedido não guarda coordenadas: elas vêm do cadastro atual do cliente, e só valem se o
+ * cadastro ainda aponta para o mesmo endereço do pedido.
+ */
+export function coordinatesIfSameAddress(
+  snapshot: { zipCode: string; street: string; number: string; city: string },
+  customer: { zipCode: string; street: string; number: string; city: string; latitude: number | null; longitude: number | null },
+): { latitude: number | null; longitude: number | null } {
+  const same = customer.zipCode === snapshot.zipCode && customer.street === snapshot.street && customer.number === snapshot.number && customer.city === snapshot.city;
+  return same ? { latitude: customer.latitude, longitude: customer.longitude } : { latitude: null, longitude: null };
+}

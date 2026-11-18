@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAPS_MAX_WAYPOINTS, type MapsPlace, addressLine, buildMapsSegments, placeParam } from "./maps";
+import { MAPS_MAX_WAYPOINTS, type MapsPlace, addressLine, buildMapsSegments, coordinatesIfSameAddress, placeParam } from "./maps";
 
 const place = (n: number, coords = false): MapsPlace => ({
   address: `Rua ${n}, ${n}, Centro, Ribeirão Preto - SP, 14010-000`,
@@ -77,5 +77,13 @@ describe("addressLine sem espaços sobrando", () => {
     expect(addressLine({ street: "Rua  Álvares Cabral", number: "88", neighborhood: "centro ", city: " Ribeirão Preto", state: "SP", zipCode: "14010080" })).toBe(
       "Rua Álvares Cabral, 88, centro, Ribeirão Preto - SP, 14010-080",
     );
+  });
+});
+
+describe("coordinatesIfSameAddress", () => {
+  const snapshot = { zipCode: "14010000", street: "Rua Um", number: "10", city: "Franca" };
+  it("usa as coordenadas do cadastro só se o endereço é o mesmo do pedido", () => {
+    expect(coordinatesIfSameAddress(snapshot, { ...snapshot, latitude: -20.5, longitude: -47.4 })).toEqual({ latitude: -20.5, longitude: -47.4 });
+    expect(coordinatesIfSameAddress(snapshot, { ...snapshot, number: "12", latitude: -20.5, longitude: -47.4 })).toEqual({ latitude: null, longitude: null });
   });
 });

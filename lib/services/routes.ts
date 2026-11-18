@@ -9,7 +9,7 @@
 import "server-only";
 
 import { dateStringToDbDate, dbDateToDateString } from "../../domain/dates";
-import { type MapsSegment, addressLine, buildMapsSegments } from "../../domain/maps";
+import { type MapsSegment, addressLine, buildMapsSegments, coordinatesIfSameAddress } from "../../domain/maps";
 import type { PaymentMethod } from "../../domain/payment";
 import { decimalStringToMilli } from "../../domain/quantity";
 import { type CityGroup, type LoadSummary, type PlanningOrder, groupByCityAndNeighborhood, suggestStopOrder, summarizeLoad } from "../../domain/route-planning";
@@ -262,17 +262,10 @@ export async function getRouteDetail(ctx: ServiceContext, id: string): Promise<R
 
   // Coordenadas vêm do cadastro atual do cliente (o pedido não guarda). Só valem se o cadastro
   // ainda aponta para o mesmo endereço do pedido; senão o Maps procura pelo endereço escrito.
-  const places = route.orders.map((row, index) => {
-    const customer = row.customer;
-    const sameAddress =
-      customer.zipCode === row.deliveryZipCode && customer.street === row.deliveryStreet && customer.number === row.deliveryNumber && customer.city === row.deliveryCity;
-    const stop = stops[index];
-    return {
-      address: stop?.addressLine ?? "",
-      latitude: sameAddress ? customer.latitude : null,
-      longitude: sameAddress ? customer.longitude : null,
-    };
-  });
+  const places = route.orders.map((row, index) => ({
+    address: stops[index]?.addressLine ?? "",
+    ...coordinatesIfSameAddress({ zipCode: row.deliveryZipCode, street: row.deliveryStreet, number: row.deliveryNumber, city: row.deliveryCity }, row.customer),
+  }));
   const hasDepot = Boolean(company.depotStreet && company.depotCity && company.depotState);
   const origin = hasDepot
     ? {

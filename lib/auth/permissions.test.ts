@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { PERMISSIONS, type Permission, USER_ROLES, type UserRole, can, homePathFor } from "./permissions";
+import { PERMISSIONS, type Permission, USER_ROLES, type UserRole, can, homePathFor, seesOnlyOwnRoutes } from "./permissions";
 
 // A tabela da seção 5.1 escrita de novo, linha a linha, com as decisões do dono do produto:
 // reabrir rota é só do ADMIN. Se alguém mexer na matriz, este teste acusa.
@@ -33,6 +33,10 @@ describe("matriz de permissões", () => {
   it("o MOTORISTA não tem nenhuma permissão do painel", () => {
     const allowed = (Object.keys(PERMISSIONS) as Permission[]).filter((p) => can("MOTORISTA", p));
     expect(allowed.sort()).toEqual(["entregas.registrar", "motorista.acessar"]);
+  });
+
+  it("na área do motorista, só o MOTORISTA fica preso às próprias rotas (ADMIN vê todas)", () => {
+    expect(USER_ROLES.filter((role) => seesOnlyOwnRoutes(role))).toEqual(["MOTORISTA"]);
   });
 
   it("início de cada papel", () => {

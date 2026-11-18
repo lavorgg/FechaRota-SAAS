@@ -37,6 +37,14 @@ export function can(role: UserRole, permission: Permission): boolean {
   return (PERMISSIONS[permission] as readonly UserRole[]).includes(role);
 }
 
+/**
+ * "Ver suas rotas e finalizar entregas": o MOTORISTA só nas rotas atribuídas a ele. O ADMIN
+ * vê e finaliza qualquer rota do dia (decisão do dono do produto).
+ */
+export function seesOnlyOwnRoutes(role: UserRole): boolean {
+  return role === "MOTORISTA";
+}
+
 /** Para onde cada papel vai depois do login (e quando abre uma área que não é a dele). */
 export function homePathFor(role: UserRole): "/app/dashboard" | "/motorista" {
   return can(role, "painel.acessar") ? "/app/dashboard" : "/motorista";

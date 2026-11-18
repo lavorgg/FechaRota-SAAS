@@ -15,6 +15,7 @@ import { type RouteStatus, isRoutePrintable } from "../../domain/route-status";
 import { type ServiceContext, assertCan } from "../auth/context";
 import { ServiceError, notFound } from "../errors";
 import { type TenantDb, getTenantDb } from "../tenant-db";
+import { containerBalances } from "./container-balance";
 
 export const MANIFEST_MESSAGES = {
   notPrintable: "Os romaneios só podem ser impressos depois que a rota é liberada para carga.",
@@ -184,29 +185,11 @@ export async function getDeliveryManifest(ctx: ServiceContext, routeId: string, 
     }),
   ]);
 
-  const customerIds = [...new Set(orders.map((order) => order.customerId))];
-  const [movements, containers] = await Promise.all([
-    customerIds.length === 0
-      ? []
-      : db.containerMovement.groupBy({
-          by: ["customerId", "containerProductId"],
-          // Movimentos desta própria rota ficam de fora: reimprimir depois das entregas mostra o
-          // mesmo saldo anterior que saiu na primeira impressão.
-          where: { customerId: { in: customerIds }, OR: [{ orderId: null }, { orderId: { notIn: orders.map((order) => order.id) } }] },
-          _sum: { delivered: true, returned: true },
-        }),
-    db.product.findMany({ where: { isReturnableContainer: true }, select: { id: true, sku: true, name: true } }),
-  ]);
-  const containerById = new Map(containers.map((container) => [container.id, container]));
-  const balances = new Map<string, Array<{ sku: string; name: string; balance: number }>>();
-  for (const movement of movements) {
-    const balance = (movement._sum.delivered ?? 0) - (movement._sum.returned ?? 0);
-    const container = containerById.get(movement.containerProductId);
-    if (balance === 0 || !container) continue;
-    const list = balances.get(movement.customerId) ?? [];
-    list.push({ sku: container.sku, name: container.name, balance });
-    balances.set(movement.customerId, list);
-  }
+  const balances = await containerBalances(
+    db,
+    [...new Set(orders.map((order) => order.customerId))],
+    orders.map((order) => order.id),
+  );
 
   const stops = orders.map((order, index) => ({
     stopSequence: order.stopSequence ?? index + 1,
@@ -230,7 +213,7 @@ export async function getDeliveryManifest(ctx: ServiceContext, routeId: string, 
     totalCents: order.totalCents,
     amountToCollectCents: order.amountToCollectCents,
     paymentMethod: order.paymentMethod,
-    containerBalance: (balances.get(order.customerId) ?? []).sort((a, b) => a.sku.localeCompare(b.sku, "pt-BR")),
+    containerBalance: (balances.get(order.customerId) ?? []).map(({ sku, name, balance }) => ({ sku, name, balance })),
   }));
   return { header, stops };
 }

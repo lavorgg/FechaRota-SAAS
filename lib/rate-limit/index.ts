@@ -24,6 +24,11 @@ export const RATE_LIMIT_RULES = {
   loginPorIp: { name: "login-ip", max: 100, windowMs: 15 * MINUTE_MS },
   /** Cadastros de empresa por IP. */
   cadastroPorIp: { name: "cadastro-ip", max: 5, windowMs: 60 * MINUTE_MS },
+  /**
+   * Endpoints da área do motorista, por usuário. Folga para descarregar a fila de um dia sem
+   * sinal (presign + finalização por entrega) de uma vez.
+   */
+  motoristaPorUsuario: { name: "motorista-usuario", max: 120, windowMs: MINUTE_MS },
 } as const satisfies Record<string, RateLimitRule>;
 
 export function hashRateLimitKey(key: string): string {
