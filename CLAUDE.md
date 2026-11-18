@@ -95,13 +95,14 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Observações do pedido | Saem no romaneio de entrega | Instruções de entrega ficam no pedido |
 | Impressão | Páginas dentro do painel; `@media print` esconde menu, topo e avisos | Prévia na tela e "Imprimir" no mesmo lugar |
 | Log de Server Actions no `next dev` | Desligado (`logging.serverFunctions: false`) | O Next 16 imprimia os argumentos, inclusive a senha do login |
+| Valor a cobrar na entrega parcial | O recalculado (itens entregues) substitui `amountToCollectCents` do pedido; o pedido original fica nos itens e na auditoria | **Decidido pelo dono do produto** |
+| ADMIN em `/motorista` | Vê todas as rotas do dia e pode iniciar e finalizar entregas de qualquer uma | **Decidido pelo dono do produto** |
+| Rota em rascunho | Não aparece para o motorista | **Decidido pelo dono do produto** |
+| Plano em atraso | O motorista inicia rota já liberada e finaliza entregas normalmente | **Decidido pelo dono do produto** |
 
 ## Perguntas em aberto para o dono do produto
 
-1. **Valor a cobrar na entrega parcial (Fase 5).** O valor recalculado substitui `amountToCollectCents` do pedido ou fica só no comprovante? Isso muda o "esperado" do fechamento.
-2. **ADMIN na área do motorista (Fase 5).** A matriz dá ao ADMIN "ver suas rotas e finalizar entregas", mas rota só é atribuída a MOTORISTA. Hoje o ADMIN entra em `/motorista` e vê só rotas atribuídas a ele (nenhuma). Ele deveria poder finalizar entregas de qualquer rota (ex.: celular do motorista quebrou)?
-3. **Configurações da empresa.** A Fase 4 criou `/app/empresa` com nome, CNPJ, telefone e endereço do depósito. Fuso, política de comprovante e retenção de arquivos continuam sem tela. Em qual fase entram?
-4. **Rotas em rascunho na área do motorista (Fase 5).** Hoje `/motorista` lista todas as rotas do dia atribuídas ao motorista, inclusive rascunhos que ainda podem mudar. O motorista deve ver só rotas liberadas?
+1. **Configurações da empresa.** A Fase 4 criou `/app/empresa` com nome, CNPJ, telefone e endereço do depósito. Fuso, política de comprovante e retenção de arquivos continuam sem tela. Em qual fase entram?
 
 ## Situação
 
