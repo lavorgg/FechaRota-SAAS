@@ -59,7 +59,7 @@ async function loadDeliverableOrder(db: TenantDb, ctx: ServiceContext, orderId: 
       paymentMethod: true,
       amountToCollectCents: true,
       routeId: true,
-      route: { select: { id: true, status: true, driverId: true } },
+      route: { select: { id: true, status: true, driverId: true, proofPolicy: true } },
       deliveryProof: { select: { id: true } },
       items: {
         select: {
@@ -157,7 +157,9 @@ export async function finalizeDelivery(ctx: ServiceContext, data: FinalizeDelive
   });
 
   const draft = { ...data, hasSignature: data.signatureKey !== null, photoCount: data.photoKeys.length };
-  const errors = validateDeliveryDraft(draft, { lines, paymentMethod: order.paymentMethod, proofPolicy: company.proofPolicy, amountToCollectCents: order.amountToCollectCents });
+  // Vale a política guardada quando a rota foi iniciada (decisão do dono do produto).
+  const proofPolicy = order.route.proofPolicy ?? company.proofPolicy;
+  const errors = validateDeliveryDraft(draft, { lines, paymentMethod: order.paymentMethod, proofPolicy, amountToCollectCents: order.amountToCollectCents });
   const firstError = Object.values(errors).find(Boolean);
   if (firstError) throw new ServiceError("VALIDACAO", firstError);
 

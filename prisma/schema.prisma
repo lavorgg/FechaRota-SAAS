@@ -441,6 +441,9 @@ model Route {
   closedById   String?
   // Dinheiro que o motorista entregou no caixa, informado no acerto (seção 5.8).
   cashHandedInCents Int?
+  // Política de comprovante em vigor quando o motorista tocou em "Iniciar rota". Mudar a política
+  // da empresa vale para as rotas iniciadas depois (decisão do dono do produto). Nulo antes de iniciar.
+  proofPolicy  ProofPolicy?
   version      Int         @default(1)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt

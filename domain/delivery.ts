@@ -29,6 +29,11 @@ export const FAILURE_REASON_LABELS: Readonly<Record<FailureReason, string>> = {
 export const PROOF_POLICIES = ["SIGNATURE_REQUIRED", "PHOTO_OR_SIGNATURE"] as const;
 export type ProofPolicy = (typeof PROOF_POLICIES)[number];
 
+export const PROOF_POLICY_LABELS: Readonly<Record<ProofPolicy, string>> = {
+  SIGNATURE_REQUIRED: "Assinatura do recebedor obrigatória",
+  PHOTO_OR_SIGNATURE: "Foto ou assinatura (pelo menos uma)",
+};
+
 /** Até 3 fotos por comprovante (seção 4, DeliveryProof). */
 export const MAX_PROOF_PHOTOS = 3;
 /** Limite de sanidade dos steppers de vasilhame. */

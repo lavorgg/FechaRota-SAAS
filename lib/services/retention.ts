@@ -8,7 +8,7 @@
 
 import "server-only";
 
-import { subtractMonths } from "../../domain/dates";
+import { retentionCutoff } from "../../domain/retention";
 import { prisma } from "../db";
 import { deleteObjects } from "../storage";
 import { getTenantDb } from "../tenant-db";
@@ -24,7 +24,7 @@ export async function runRetention(now: Date = new Date(), batch = RETENTION_BAT
 
   for (const company of companies) {
     const db = getTenantDb({ companyId: company.id });
-    const cutoff = subtractMonths(now, company.fileRetentionMonths);
+    const cutoff = retentionCutoff(now, company.fileRetentionMonths);
     const expired = await db.fileObject.findMany({
       where: { status: "CONFIRMED", deletedAt: null, createdAt: { lt: cutoff } },
       select: { key: true },

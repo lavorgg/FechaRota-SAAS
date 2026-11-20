@@ -132,6 +132,7 @@ async function buildBundle(db: TenantDb, ctx: ServiceContext, routeId: string, n
         status: true,
         version: true,
         deliveryDate: true,
+        proofPolicy: true,
         driver: { select: { name: true } },
         vehicle: { select: { plate: true, model: true } },
         orders: {
@@ -191,7 +192,8 @@ async function buildBundle(db: TenantDb, ctx: ServiceContext, routeId: string, n
       driverName: route.driver.name,
       vehicle: route.vehicle,
     },
-    company: { name: company.name, proofPolicy: company.proofPolicy },
+    // Rota iniciada: a política guardada no início; antes disso, a atual da empresa.
+    company: { name: company.name, proofPolicy: route.proofPolicy ?? company.proofPolicy },
     stops: route.orders.map((order, index) => ({
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -257,9 +259,12 @@ export async function startDriverRoute(ctx: ServiceContext, routeId: string, now
       await tx.user.updateMany({ where: { id: route.driverId }, data: { updatedAt: now } });
       const other = await tx.route.findFirst({ where: { driverId: route.driverId, status: "EM_ANDAMENTO", id: { not: route.id } }, select: { code: true } });
       if (other) throw new ServiceError("VALIDACAO", DRIVER_MESSAGES.otherInProgress(other.code));
+      // A rota guarda a política de comprovante de agora: mudar a política da empresa depois
+      // não recusa entregas desta rota (decisão do dono do produto).
+      const { proofPolicy } = await tx.company.findUniqueOrThrow({ where: { id: ctx.companyId }, select: { proofPolicy: true } });
       const started = await tx.route.updateMany({
         where: { id: route.id, status: "LIBERADA_CARGA", version: route.version },
-        data: { status: "EM_ANDAMENTO", startedAt: now, version: { increment: 1 } },
+        data: { status: "EM_ANDAMENTO", startedAt: now, proofPolicy, version: { increment: 1 } },
       });
       if (started.count === 0) throw new ServiceError("CONFLITO", MESSAGES.staleVersion);
       await tx.auditLog.create({
