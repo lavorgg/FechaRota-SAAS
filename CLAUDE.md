@@ -115,6 +115,10 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Foto acima de 400 KB | Baixa a qualidade até 0,45 e depois reduz o lado em 20% (mínimo 640 px) | Meta de 400 KB da seção 5.7 |
 | Lighthouse PWA | Instalabilidade conferida no E2E pelo Chrome (`Page.getInstallabilityErrors`); só "in-incognito" é aceito | O Lighthouse 12 removeu a categoria PWA; todo contexto do Playwright é anônimo |
 | CORS do storage local | `db:reset` libera as portas 3000 e 3100 | Upload direto do navegador; o CORS do R2 é da Fase 6 |
+| Sobra/falta no acerto | Dinheiro entregue no caixa − (esperado − Pix registrado pelo motorista) | **Decidido pelo dono do produto** |
+| Pix não conferido ao concluir o acerto | A rota conclui e o Pix continua "a conferir"; a confirmação segue disponível no fechamento da rota concluída | **Decidido pelo dono do produto** |
+| Correção de entrega finalizada | Só valores recebidos (dinheiro e Pix) de uma parada, na tela de acerto, por ADMIN, com motivo e auditoria; desfecho e quantidades não mudam | **Decidido pelo dono do produto** |
+| Auditoria | Tela de consulta só para ADMIN, com filtro por período e tipo de evento | **Decidido pelo dono do produto** |
 
 ## Perguntas em aberto para o dono do produto
 
