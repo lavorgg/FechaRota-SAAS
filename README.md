@@ -48,10 +48,10 @@ pnpm dev
 
 ### No Windows, com dois cliques
 
-Pré-requisito: Docker Desktop instalado. Extraia o projeto num caminho curto (ex.: `C:\FechaRota`) e dê dois cliques em `iniciar-fecharota.cmd`. O arquivo:
+Pré-requisito: Docker Desktop instalado. Extraia o projeto num caminho curto e fora do OneDrive (ex.: `C:\FechaRota`) e dê dois cliques em `iniciar-fecharota.cmd`. O arquivo:
 
 1. usa o Node 22 do Windows, se houver; com outra versão (ou nenhuma), baixa o Node 22 de nodejs.org para a pasta `.node`, confere o SHA-256 com o valor fixado no arquivo e instala o pnpm 10.28.0 junto dele, sem mexer no Node instalado;
-2. inicia o Docker Desktop se ele estiver fechado e sobe só o Postgres de desenvolvimento e o armazenamento (portas 5432 e 9000);
+2. inicia o Docker Desktop se ele estiver fechado e sobe só o Postgres de desenvolvimento e o armazenamento. O Postgres fica na porta 55432, não na 5432, porque um PostgreSQL instalado no Windows costuma ocupar a 5432; o armazenamento fica na 9000;
 3. cria o `.env` a partir do `.env.example` se ele não existir;
 4. na primeira vez, instala as dependências, cria o banco de demonstração (`pnpm db:reset`) e gera o build de produção;
 5. nas vezes seguintes, só aplica migrations novas (`pnpm db:deploy`), sem apagar nada;

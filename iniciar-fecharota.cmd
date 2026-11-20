@@ -14,6 +14,13 @@ rem conferido, sem mexer no Node instalado. O pnpm é instalado se faltar.
 cd /d "%~dp0"
 title FechaRota
 
+echo "%CD%" | findstr /i "OneDrive" >nul
+if not errorlevel 1 (
+  echo Aviso: esta pasta está dentro do OneDrive. Sincronizar os milhares de arquivos de node_modules deixa tudo lento e pode travar o build.
+  echo Recomendado: mova a pasta para fora do OneDrive, por exemplo C:\FechaRota, e rode de lá.
+  echo.
+)
+
 set "MODO=%~1"
 if "%MODO%"=="" goto :modo_ok
 if /i "%MODO%"=="atualizar" goto :modo_ok
@@ -113,10 +120,16 @@ echo O Docker não respondeu em 3 minutos. Abra o Docker Desktop, espere ele fic
 goto :falha
 :docker_ok
 
+rem Porta própria para o Postgres do Docker: um PostgreSQL instalado no Windows costuma ocupar a
+rem 5432 e recusaria a senha. Variáveis do processo valem mais que o .env (Next, Prisma e scripts).
+set "FECHAROTA_DB_PORT=55432"
+set "DATABASE_URL=postgresql://fecharota:fecharota@127.0.0.1:55432/fecharota_dev"
+set "DIRECT_URL=postgresql://fecharota:fecharota@127.0.0.1:55432/fecharota_dev"
+
 echo Subindo o banco de dados e o armazenamento de arquivos no Docker...
 docker compose up -d --wait db storage
 if errorlevel 1 (
-  echo Não foi possível subir os serviços. Confira se as portas 5432 e 9000 estão livres: um PostgreSQL instalado no Windows costuma ocupar a 5432.
+  echo Não foi possível subir os serviços. Confira se as portas 55432 e 9000 estão livres.
   goto :falha
 )
 docker compose run --rm -T storage_init >nul
