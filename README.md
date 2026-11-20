@@ -46,6 +46,24 @@ pnpm dev
 - Entre em <http://localhost:3000/login> com uma das contas impressas pelo seed (senha `fecharota123`): `admin@exemplo.test`, `expedicao@exemplo.test` ou `motorista1@exemplo.test`.
 - Para trocar de perfil sem sair e entrar de novo, defina `ENABLE_DEV_IMPERSONATION="true"` no `.env` e rode `pnpm dev`. O botão "Trocar perfil (dev)" aparece no canto da tela. Fora de `next dev` a troca não existe: o app se recusa a iniciar com essa variável ligada.
 
+### No Windows, com dois cliques
+
+Pré-requisitos: Node.js 22 LTS e Docker Desktop instalados. Extraia o projeto num caminho curto (ex.: `C:\FechaRota`) e dê dois cliques em `iniciar-fecharota.cmd`. O arquivo:
+
+1. confere o Node 22 e instala o pnpm 10.28.0 se faltar;
+2. inicia o Docker Desktop se ele estiver fechado e sobe só o Postgres de desenvolvimento e o armazenamento (portas 5432 e 9000);
+3. cria o `.env` a partir do `.env.example` se ele não existir;
+4. na primeira vez, instala as dependências, cria o banco de demonstração (`pnpm db:reset`) e gera o build de produção;
+5. nas vezes seguintes, só aplica migrations novas (`pnpm db:deploy`), sem apagar nada;
+6. sobe o servidor em `http://localhost:3000`, só para esta máquina, e abre o navegador quando o `/api/health` responder.
+
+A primeira execução leva alguns minutos (imagens do Docker, dependências e build). Para desligar, feche a janela; os contêineres continuam no Docker até `docker compose stop`.
+
+- `iniciar-fecharota.cmd atualizar`: reinstala as dependências e refaz o build. Use depois de trocar o código.
+- `iniciar-fecharota.cmd reset`: apaga os dados locais e recria o banco de demonstração. Pede para digitar `APAGAR`.
+
+O celular não consegue usar esse servidor: câmera e service worker exigem HTTPS, e os links de upload apontam para `localhost:9000`, que no celular é o próprio celular. Para testar no celular, use o deploy de preview ("Teste em celular de verdade", abaixo).
+
 ### Comandos
 
 | Comando | O que faz |

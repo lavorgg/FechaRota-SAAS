@@ -16,7 +16,7 @@ import { createRouteSchema } from "@/lib/validation/routes";
 import { cleanDatabase } from "./fixtures";
 
 function runSeed(extraEnv: Record<string, string> = {}) {
-  return spawnSync("pnpm", ["exec", "tsx", "prisma/seed.ts"], { env: { ...process.env, ...extraEnv }, encoding: "utf8" });
+  return spawnSync("pnpm", ["exec", "tsx", "prisma/seed.ts"], { env: { ...process.env, ...extraEnv }, encoding: "utf8", shell: process.platform === "win32" });
 }
 
 const today = todayInTimeZone("America/Sao_Paulo");

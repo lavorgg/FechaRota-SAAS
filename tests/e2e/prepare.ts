@@ -59,7 +59,7 @@ async function prepare(): Promise<void> {
   await ensureDatabase(env.DIRECT_URL ?? "");
   await ensureBucket(env);
 
-  const reset = spawnSync("pnpm", ["db:reset"], { env: { ...process.env, ...env, NODE_ENV: "development" }, encoding: "utf8" });
+  const reset = spawnSync("pnpm", ["db:reset"], { env: { ...process.env, ...env, NODE_ENV: "development" }, encoding: "utf8", shell: process.platform === "win32" });
   if (reset.status !== 0) {
     throw new Error(`pnpm db:reset falhou para o E2E:\n${reset.stdout}\n${reset.stderr}`);
   }

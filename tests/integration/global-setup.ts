@@ -24,7 +24,7 @@ export default async function setup(): Promise<void> {
     await client.end().catch(() => undefined);
   }
 
-  const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], { env: process.env, encoding: "utf8" });
+  const migrate = spawnSync("pnpm", ["exec", "prisma", "migrate", "deploy"], { env: process.env, encoding: "utf8", shell: process.platform === "win32" });
   if (migrate.status !== 0) {
     throw new Error(`prisma migrate deploy falhou no banco de teste:\n${migrate.stdout}\n${migrate.stderr}`);
   }

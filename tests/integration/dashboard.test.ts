@@ -21,7 +21,7 @@ async function userByEmail(email: string) {
 
 beforeAll(async () => {
   await cleanDatabase();
-  const seed = spawnSync("pnpm", ["exec", "tsx", "prisma/seed.ts"], { env: process.env, encoding: "utf8" });
+  const seed = spawnSync("pnpm", ["exec", "tsx", "prisma/seed.ts"], { env: process.env, encoding: "utf8", shell: process.platform === "win32" });
   expect(seed.status, `${seed.stdout}\n${seed.stderr}`).toBe(0);
 });
 

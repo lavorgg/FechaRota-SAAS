@@ -23,7 +23,8 @@ function requireLocalUrl(name: string): URL {
 }
 
 function run(command: string, args: string[]): void {
-  const result = spawnSync(command, args, { stdio: "inherit", env: process.env });
+  // No Windows o pnpm é um .cmd, que o Node só executa por meio do shell.
+  const result = spawnSync(command, args, { stdio: "inherit", env: process.env, shell: process.platform === "win32" });
   if (result.status !== 0) {
     throw new Error(`"${command} ${args.join(" ")}" falhou.`);
   }
