@@ -54,3 +54,6 @@ next-env.d.ts
 # testes
 /test-results/
 /playwright-report/
+
+# Node 22 portátil baixado pelo iniciar-fecharota.cmd
+/.node/

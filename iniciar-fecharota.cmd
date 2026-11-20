@@ -7,7 +7,9 @@ rem   iniciar-fecharota.cmd             uso normal
 rem   iniciar-fecharota.cmd atualizar   reinstala as dependências e refaz o build (depois de trocar o código)
 rem   iniciar-fecharota.cmd reset       APAGA os dados locais e recria o banco de demonstração
 rem
-rem Pré-requisitos: Node.js 22 e Docker Desktop. O pnpm é instalado aqui se faltar.
+rem Pré-requisito: Docker Desktop. O projeto usa o Node.js 22: se o Windows não tiver o Node 22
+rem (nenhum Node, ou outra versão), uma cópia dele é baixada para a pasta .node, com o hash
+rem conferido, sem mexer no Node instalado. O pnpm é instalado se faltar.
 
 cd /d "%~dp0"
 title FechaRota
@@ -21,19 +23,55 @@ goto :falha
 :modo_ok
 
 rem --- Node.js 22 ---
-where node >nul 2>&1
-if errorlevel 1 (
-  echo O Node.js não está instalado. Instale a versão 22 LTS em https://nodejs.org e rode de novo.
-  goto :falha
-)
-set "NODE_MAJOR="
-for /f "tokens=1 delims=." %%v in ('node -v') do set "NODE_MAJOR=%%v"
-if not "%NODE_MAJOR%"=="v22" (
-  echo Este projeto usa o Node.js 22, e o instalado é %NODE_MAJOR%. Instale a versão 22 LTS em https://nodejs.org e rode de novo.
-  goto :falha
-)
+rem Versão e hashes oficiais: https://nodejs.org/dist/v22.23.5/SHASUMS256.txt
+set "NODE_VERSAO=v22.23.5"
+set "NODE_SHA_X64=4a191082e9706866830379d577d2cc8a50c776fcd9436a8d061b063ed0d9a0e3"
+set "NODE_SHA_ARM64=c1856817f611738c77534efbff8a5a17990593eab24046bc8d2c23a77a160d13"
 
-rem --- pnpm ---
+set "NODE_MAJOR="
+where node >nul 2>&1
+if not errorlevel 1 for /f "tokens=1 delims=." %%v in ('node -v') do set "NODE_MAJOR=%%v"
+if "%NODE_MAJOR%"=="v22" goto :node_sistema
+
+rem Node 22 portátil, só para esta pasta.
+set "NODE_ARQ="
+if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" set "NODE_ARQ=x64"
+if /i "%PROCESSOR_ARCHITEW6432%"=="AMD64" set "NODE_ARQ=x64"
+if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" set "NODE_ARQ=arm64"
+if not defined NODE_ARQ (
+  echo O Node 22 precisa de Windows de 64 bits, x64 ou ARM64.
+  goto :falha
+)
+if "%NODE_ARQ%"=="x64" set "NODE_SHA=%NODE_SHA_X64%"
+if "%NODE_ARQ%"=="arm64" set "NODE_SHA=%NODE_SHA_ARM64%"
+set "NODE_NOME=node-%NODE_VERSAO%-win-%NODE_ARQ%"
+set "NODE_DIR=%CD%\.node\%NODE_NOME%"
+if exist "%NODE_DIR%\.pronto" goto :node_portatil
+if defined NODE_MAJOR echo O Node instalado no Windows é o %NODE_MAJOR%, e o FechaRota usa o Node 22.
+if not defined NODE_MAJOR echo O Node.js não está instalado no Windows.
+echo Baixando o Node %NODE_VERSAO% só para esta pasta. O Node do Windows, se houver, não muda.
+if not exist ".node" mkdir ".node"
+if exist "%NODE_DIR%" rmdir /s /q "%NODE_DIR%"
+curl.exe -fL --retry 3 -o ".node\%NODE_NOME%.zip" "https://nodejs.org/dist/%NODE_VERSAO%/%NODE_NOME%.zip"
+if errorlevel 1 goto :falha_node_baixar
+set "NODE_HASH="
+for /f %%h in ('certutil -hashfile ".node\%NODE_NOME%.zip" SHA256 ^| findstr /v ":"') do set "NODE_HASH=%%h"
+if /i not "%NODE_HASH%"=="%NODE_SHA%" goto :falha_node_hash
+rem O tar do Windows abre .zip; um tar do Git no PATH não abre.
+"%SystemRoot%\System32\tar.exe" -xf ".node\%NODE_NOME%.zip" -C ".node"
+if errorlevel 1 goto :falha_node_extrair
+del ".node\%NODE_NOME%.zip"
+echo ok> "%NODE_DIR%\.pronto"
+:node_portatil
+set "PATH=%NODE_DIR%;%PATH%"
+if exist "%NODE_DIR%\pnpm.cmd" goto :pnpm_ok
+echo Instalando o pnpm 10.28.0 junto com esse Node...
+call "%NODE_DIR%\npm.cmd" install -g --prefix "%NODE_DIR%" pnpm@10.28.0
+if errorlevel 1 goto :falha
+goto :pnpm_ok
+
+rem --- Node 22 do Windows: pnpm global ---
+:node_sistema
 where pnpm >nul 2>&1
 if not errorlevel 1 goto :pnpm_ok
 echo Instalando o pnpm 10.28.0...
@@ -161,6 +199,17 @@ rem Só nesta máquina (127.0.0.1): as contas de demonstração têm senha conhe
 call pnpm exec next start -H 127.0.0.1 -p 3000
 if errorlevel 1 goto :falha
 goto :fim
+
+:falha_node_baixar
+echo Não foi possível baixar o Node de nodejs.org. Confira a conexão e rode de novo.
+goto :falha
+:falha_node_hash
+del ".node\%NODE_NOME%.zip" >nul 2>&1
+echo O arquivo baixado não confere com o hash oficial do Node. Ele foi apagado e nada foi instalado.
+goto :falha
+:falha_node_extrair
+echo Não foi possível extrair o Node baixado.
+goto :falha
 
 :falha
 echo.

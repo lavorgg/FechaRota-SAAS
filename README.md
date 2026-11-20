@@ -48,9 +48,9 @@ pnpm dev
 
 ### No Windows, com dois cliques
 
-Pré-requisitos: Node.js 22 LTS e Docker Desktop instalados. Extraia o projeto num caminho curto (ex.: `C:\FechaRota`) e dê dois cliques em `iniciar-fecharota.cmd`. O arquivo:
+Pré-requisito: Docker Desktop instalado. Extraia o projeto num caminho curto (ex.: `C:\FechaRota`) e dê dois cliques em `iniciar-fecharota.cmd`. O arquivo:
 
-1. confere o Node 22 e instala o pnpm 10.28.0 se faltar;
+1. usa o Node 22 do Windows, se houver; com outra versão (ou nenhuma), baixa o Node 22 de nodejs.org para a pasta `.node`, confere o SHA-256 com o valor fixado no arquivo e instala o pnpm 10.28.0 junto dele, sem mexer no Node instalado;
 2. inicia o Docker Desktop se ele estiver fechado e sobe só o Postgres de desenvolvimento e o armazenamento (portas 5432 e 9000);
 3. cria o `.env` a partir do `.env.example` se ele não existir;
 4. na primeira vez, instala as dependências, cria o banco de demonstração (`pnpm db:reset`) e gera o build de produção;
