@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { type SettlementOrder, buildSettlement, calcDifferenceCents } from "./settlement";
+import { type SettlementOrder, buildSettlement, calcDifferenceCents, differenceLabel } from "./settlement";
 
 const caixa = { productId: "caixa", sku: "CAIXA", name: "Caixa", unitsPerContainer: 12 };
 const engradado = { productId: "eng", sku: "ENG", name: "Engradado", unitsPerContainer: 1 };
@@ -92,5 +92,13 @@ describe("fechamento", () => {
     expect(settlement.openStops).toBe(1);
     expect(settlement.goods.find((line) => line.sku === "QJ")).toMatchObject({ loadedMilli: 6_750, deliveredMilli: 3_250, returnedMilli: 1_500, openMilli: 2_000 });
     expect(settlement.money.expectedCents).toBe(25_076 + 41_570);
+  });
+});
+
+describe("rótulo da diferença", () => {
+  it("sobra, falta ou sem diferença, em texto", () => {
+    expect(differenceLabel(924)).toMatch(/^Sobra de R\$\s9,24$/);
+    expect(differenceLabel(-176)).toMatch(/^Falta de R\$\s1,76$/);
+    expect(differenceLabel(0)).toBe("Sem diferença");
   });
 });

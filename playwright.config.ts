@@ -32,7 +32,7 @@ export default defineConfig({
     },
     {
       name: "painel",
-      testMatch: ["auth.spec.ts", "permissoes.spec.ts", "dashboard.spec.ts", "usuarios.spec.ts", "cadastros.spec.ts", "importacao.spec.ts", "pedidos.spec.ts", "rotas.spec.ts"],
+      testMatch: ["auth.spec.ts", "permissoes.spec.ts", "dashboard.spec.ts", "usuarios.spec.ts", "cadastros.spec.ts", "importacao.spec.ts", "pedidos.spec.ts", "rotas.spec.ts", "fechamento.spec.ts"],
       use: { ...devices["Desktop Chrome"], viewport: { width: 1366, height: 900 } },
     },
     {

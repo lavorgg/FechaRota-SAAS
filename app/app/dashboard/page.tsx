@@ -1,5 +1,6 @@
 import { AlertTriangleIcon, CalendarClockIcon, PackageXIcon, RouteIcon } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { GenerateRecurringButton } from "@/components/pedidos/generate-recurring-button";
@@ -149,7 +150,9 @@ export default async function DashboardPage({ searchParams }: PageProps<"/app/da
                 <ul className="text-sm text-muted-foreground">
                   {alerts.overdueSettlements.map((route) => (
                     <li key={route.code}>
-                      {route.code} · {route.name} · {formatDateString(route.deliveryDate)}
+                      <Link href={`/app/rotas/${route.id}/fechamento`} className="underline underline-offset-4 hover:text-foreground">
+                        {route.code} · {route.name} · {formatDateString(route.deliveryDate)}
+                      </Link>
                     </li>
                   ))}
                 </ul>

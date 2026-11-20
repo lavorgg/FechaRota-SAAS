@@ -2,6 +2,7 @@
 // pendências, a partir dos pedidos, comprovantes e movimentos de vasilhame da rota.
 
 import { calcContainersByOrder } from "./cargo-manifest";
+import { formatCents } from "./money";
 import type { OrderStatus } from "./order-status";
 import type { PaymentMethod, PaymentStatus } from "./payment";
 import type { ProductUnit } from "./quantity";
@@ -99,6 +100,12 @@ export function isDeliveredStatus(status: OrderStatus): boolean {
 
 export function calcDifferenceCents(params: { cashHandedInCents: number; expectedCents: number; pixInformedCents: number }): number {
   return params.cashHandedInCents - (params.expectedCents - params.pixInformedCents);
+}
+
+/** "Sobra de R$ 9,24", "Falta de R$ 1,76" ou "Sem diferença": sempre em texto, não só em cor. */
+export function differenceLabel(cents: number): string {
+  if (cents === 0) return "Sem diferença";
+  return cents > 0 ? `Sobra de ${formatCents(cents)}` : `Falta de ${formatCents(-cents)}`;
 }
 
 function bySku<T extends { sku: string }>(lines: T[]): T[] {

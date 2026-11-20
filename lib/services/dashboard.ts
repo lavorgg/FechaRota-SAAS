@@ -20,7 +20,7 @@ export type DashboardData = {
     /** Pedidos não entregues (de qualquer data) que ainda não foram reagendados. */
     notDeliveredWithoutReschedule: { total: number; items: Array<{ orderNumber: number; customerName: string; deliveryDate: string }> };
     /** Rotas aguardando acerto há mais de 12 horas (de qualquer data). */
-    overdueSettlements: Array<{ code: string; name: string; deliveryDate: string }>;
+    overdueSettlements: Array<{ id: string; code: string; name: string; deliveryDate: string }>;
   };
 };
 
@@ -63,7 +63,7 @@ export async function getDashboard(ctx: ServiceContext, date: string, now: Date 
     }),
     db.route.findMany({
       where: { status: "AGUARDANDO_ACERTO" },
-      select: { code: true, name: true, status: true, deliveryDate: true, finishedAt: true, updatedAt: true },
+      select: { id: true, code: true, name: true, status: true, deliveryDate: true, finishedAt: true, updatedAt: true },
       orderBy: { deliveryDate: "asc" },
     }),
   ]);
@@ -110,7 +110,7 @@ export async function getDashboard(ctx: ServiceContext, date: string, now: Date 
       },
       overdueSettlements: awaitingSettlement
         .filter((route) => isSettlementOverdue(route, now))
-        .map((route) => ({ code: route.code, name: route.name, deliveryDate: dbDateToDateString(route.deliveryDate) })),
+        .map((route) => ({ id: route.id, code: route.code, name: route.name, deliveryDate: dbDateToDateString(route.deliveryDate) })),
     },
   };
 }

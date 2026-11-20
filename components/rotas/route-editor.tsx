@@ -6,7 +6,7 @@
 // A página monta este componente com `key` = versão da rota: depois de cada gravação a página
 // é revalidada, chega a versão nova e o estado local (ordem otimista, diálogos) recomeça limpo.
 
-import { ArrowLeftIcon, ListOrderedIcon, LockOpenIcon, MapIcon, PencilIcon, PrinterIcon, SendIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
+import { ArrowLeftIcon, CalculatorIcon, ListOrderedIcon, LockOpenIcon, MapIcon, PencilIcon, PrinterIcon, SendIcon, Trash2Icon, TriangleAlertIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -113,6 +113,14 @@ export function RouteEditor({ route, canReopen, canEditCompany, readOnly }: Prop
                   </Link>
                 </Button>
               </>
+            )}
+            {(route.status === "EM_ANDAMENTO" || route.status === "AGUARDANDO_ACERTO" || route.status === "CONCLUIDA") && (
+              <Button asChild>
+                <Link href={`/app/rotas/${route.id}/fechamento`}>
+                  <CalculatorIcon aria-hidden />
+                  Fechamento
+                </Link>
+              </Button>
             )}
             {route.status === "LIBERADA_CARGA" && canReopen && (
               <Button variant="outline" onClick={() => setDialog("reabrir")} disabled={readOnly || pending}>

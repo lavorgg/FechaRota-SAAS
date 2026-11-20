@@ -80,6 +80,7 @@ export type SettlementDTO = {
     closedByName: string | null;
   };
   companyName: string;
+  companyCnpj: string | null;
   settlement: Settlement;
   stops: SettlementStopDTO[];
   generatedAt: string;
@@ -156,7 +157,7 @@ export async function getSettlement(ctx: ServiceContext, routeId: string, now: D
       orderBy: [{ stopSequence: "asc" }, { orderNumber: "asc" }],
     }),
     db.containerMovement.findMany({ where: { routeId }, select: { containerProductId: true, delivered: true, returned: true, containerProduct: { select: { sku: true, name: true } } } }),
-    db.company.findUniqueOrThrow({ where: { id: ctx.companyId }, select: { name: true } }),
+    db.company.findUniqueOrThrow({ where: { id: ctx.companyId }, select: { name: true, cnpj: true } }),
   ]);
 
   const settlement = buildSettlement({
@@ -201,6 +202,7 @@ export async function getSettlement(ctx: ServiceContext, routeId: string, now: D
       closedByName: route.closedBy?.name ?? null,
     },
     companyName: company.name,
+    companyCnpj: company.cnpj,
     settlement,
     stops: orders.map((order, index) => {
       const proof = order.deliveryProof;
