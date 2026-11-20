@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { type ActionResult, runAction } from "@/lib/actions/run-action";
-import { type CompanySettingsDTO, updateCompanySettings } from "@/lib/services/company";
+import { type CompanySettingsDTO, countFilesBeyondRetention, updateCompanySettings } from "@/lib/services/company";
 import { companySettingsSchema } from "@/lib/validation/routes";
 
 export async function updateCompanySettingsAction(input: unknown): Promise<ActionResult<CompanySettingsDTO>> {
@@ -13,4 +14,11 @@ export async function updateCompanySettingsAction(input: unknown): Promise<Actio
     revalidatePath("/app", "layout");
     return company;
   });
+}
+
+/** Prévia antes de reduzir a retenção: quantos arquivos o cron apagaria. */
+export async function previewRetentionAction(input: unknown): Promise<ActionResult<{ files: number }>> {
+  return runAction("empresa-previa-retencao", input, { schema: z.object({ months: z.number().int() }), permission: "usuarios.gerenciar", write: false }, async (ctx, data) => ({
+    files: await countFilesBeyondRetention(ctx, data.months),
+  }));
 }

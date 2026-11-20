@@ -9,7 +9,8 @@ import { useState, useTransition } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
-import { updateCompanySettingsAction } from "@/app/app/empresa/actions";
+import { previewRetentionAction, updateCompanySettingsAction } from "@/app/app/empresa/actions";
+import { ConfirmDialog } from "@/components/lista/confirm-dialog";
 import { applyServerFieldErrors } from "@/components/forms/server-errors";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -17,10 +18,13 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegen
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCep } from "@/domain/cep";
+import { PROOF_POLICIES, PROOF_POLICY_LABELS } from "@/domain/delivery";
+import { RETENTION_MONTHS_MAX, RETENTION_MONTHS_MIN } from "@/domain/retention";
 import { formatDocument } from "@/domain/document";
 import { BRAZILIAN_STATES, formatPhoneBR } from "@/domain/normalize";
 import { lookupCep } from "@/lib/cep-lookup";
 import type { CompanySettingsDTO } from "@/lib/services/company";
+import { BRAZIL_TIMEZONES } from "@/lib/validation/common";
 import { type CompanySettingsData, type CompanySettingsInput, companySettingsSchema } from "@/lib/validation/routes";
 
 const NO_STATE = "sem-uf";
@@ -30,6 +34,9 @@ function defaults(company: CompanySettingsDTO): CompanySettingsInput {
     name: company.name,
     cnpj: company.cnpj ? formatDocument(company.cnpj) : "",
     phone: company.phone ? formatPhoneBR(company.phone) : "",
+    timezone: company.timezone,
+    proofPolicy: company.proofPolicy,
+    fileRetentionMonths: String(company.fileRetentionMonths),
     depotZipCode: company.depotZipCode ? formatCep(company.depotZipCode) : "",
     depotStreet: company.depotStreet ?? "",
     depotNumber: company.depotNumber ?? "",
@@ -68,7 +75,9 @@ export function CompanySettingsForm({ company, readOnly }: { company: CompanySet
     document.getElementById("depotNumber")?.focus();
   }
 
-  const onSubmit = form.handleSubmit(() => {
+  const [retentionWarning, setRetentionWarning] = useState<{ months: number; files: number } | null>(null);
+
+  function save() {
     setServerError(null);
     startTransition(async () => {
       const result = await updateCompanySettingsAction(form.getValues());
@@ -80,6 +89,23 @@ export function CompanySettingsForm({ company, readOnly }: { company: CompanySet
         setServerError(result.error);
         applyServerFieldErrors(form, result);
       }
+    });
+  }
+
+  // Reduzir a retenção apaga arquivos na próxima madrugada: antes, mostra quantos.
+  const onSubmit = form.handleSubmit((data) => {
+    if (data.fileRetentionMonths >= company.fileRetentionMonths) {
+      save();
+      return;
+    }
+    startTransition(async () => {
+      const preview = await previewRetentionAction({ months: data.fileRetentionMonths });
+      if (!preview.ok) {
+        setServerError(preview.error);
+        return;
+      }
+      if (preview.data.files === 0) save();
+      else setRetentionWarning({ months: data.fileRetentionMonths, files: preview.data.files });
     });
   });
 
@@ -108,6 +134,62 @@ export function CompanySettingsForm({ company, readOnly }: { company: CompanySet
               {text("phone", "Telefone (opcional)", { type: "tel", inputMode: "tel", placeholder: "(16) 3333-0000" })}
             </div>
             <FieldDescription>O nome e o CNPJ saem no cabeçalho dos romaneios.</FieldDescription>
+          </FieldGroup>
+        </FieldSet>
+
+        <FieldSet>
+          <FieldLegend>Operação</FieldLegend>
+          <FieldGroup>
+            <Field data-invalid={Boolean(errors.timezone)}>
+              <FieldLabel htmlFor="timezone">Fuso horário</FieldLabel>
+              <Controller
+                control={form.control}
+                name="timezone"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
+                    <SelectTrigger id="timezone" className="w-full md:w-96">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BRAZIL_TIMEZONES.map((zone) => (
+                        <SelectItem key={zone.value} value={zone.value}>
+                          {zone.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldDescription>Define o que é &quot;hoje&quot; no painel e na área do motorista. As datas de entrega já lançadas não mudam.</FieldDescription>
+              <FieldError errors={[errors.timezone]} />
+            </Field>
+            <Field data-invalid={Boolean(errors.proofPolicy)}>
+              <FieldLabel htmlFor="proofPolicy">Comprovante de entrega</FieldLabel>
+              <Controller
+                control={form.control}
+                name="proofPolicy"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange} disabled={readOnly}>
+                    <SelectTrigger id="proofPolicy" className="w-full md:w-96">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PROOF_POLICIES.map((policy) => (
+                        <SelectItem key={policy} value={policy}>
+                          {PROOF_POLICY_LABELS[policy]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              <FieldDescription>Vale para as rotas iniciadas depois da mudança. Rotas já em andamento seguem a regra do início.</FieldDescription>
+              <FieldError errors={[errors.proofPolicy]} />
+            </Field>
+            {text("fileRetentionMonths", "Guardar fotos e assinaturas por (meses)", { type: "number", inputMode: "numeric", min: RETENTION_MONTHS_MIN, max: RETENTION_MONTHS_MAX, className: "md:w-40" })}
+            <FieldDescription>
+              De {RETENTION_MONTHS_MIN} a {RETENTION_MONTHS_MAX} meses. Depois disso, os arquivos são apagados toda madrugada; o comprovante continua, sem as imagens.
+            </FieldDescription>
           </FieldGroup>
         </FieldSet>
 
@@ -176,6 +258,18 @@ export function CompanySettingsForm({ company, readOnly }: { company: CompanySet
           {pending ? "Salvando..." : "Salvar"}
         </Button>
       </div>
+      <ConfirmDialog
+        open={retentionWarning !== null}
+        onOpenChange={(open) => !open && setRetentionWarning(null)}
+        title={`Reduzir a retenção para ${retentionWarning?.months ?? ""} meses?`}
+        description={`${retentionWarning?.files ?? 0} ${retentionWarning?.files === 1 ? "foto ou assinatura" : "fotos e assinaturas"} de comprovante já ${retentionWarning?.files === 1 ? "passou" : "passaram"} desse prazo e ${retentionWarning?.files === 1 ? "será apagada" : "serão apagadas"} de vez na próxima madrugada. Os comprovantes continuam, sem as imagens.`}
+        confirmLabel="Reduzir e apagar"
+        pending={pending}
+        onConfirm={() => {
+          setRetentionWarning(null);
+          save();
+        }}
+      />
     </form>
   );
 }

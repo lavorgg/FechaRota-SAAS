@@ -30,6 +30,9 @@ import { companySettingsSchema, createRouteSchema, reopenRouteSchema } from "@/l
 
 import { type CompanyFixture, cleanDatabase, contextOf, createCompanyFixture } from "./fixtures";
 
+/** Campos de operação da empresa, obrigatórios no formulário. */
+const OPERACAO = { timezone: "America/Sao_Paulo", proofPolicy: "PHOTO_OR_SIGNATURE", fileRetentionMonths: "12" } as const;
+
 let a: CompanyFixture;
 let b: CompanyFixture;
 let expedicao: { id: string; companyId: string; role: "EXPEDICAO" };
@@ -247,7 +250,7 @@ describe("rascunho", () => {
 
     await updateCompanySettings(
       contextOf(a.admin),
-      companySettingsSchema.parse({ name: "Empresa A", depotZipCode: "14020-000", depotStreet: "Rua do Depósito", depotNumber: "1", depotNeighborhood: "Distrito Industrial", depotCity: "Ribeirão Preto", depotState: "SP" }),
+      companySettingsSchema.parse({ ...OPERACAO, name: "Empresa A", depotZipCode: "14020-000", depotStreet: "Rua do Depósito", depotNumber: "1", depotNeighborhood: "Distrito Industrial", depotCity: "Ribeirão Preto", depotState: "SP" }),
     );
     detail = await getRouteDetail(contextOf(a.admin), routeId);
     expect(detail.hasDepot).toBe(true);
@@ -403,7 +406,7 @@ describe("excluir rascunho", () => {
 describe("configurações da empresa", () => {
   it("só ADMIN lê e altera; alteração auditada", async () => {
     expect((await rejection(getCompanySettings(contextOf(expedicao)))).code).toBe("SEM_PERMISSAO");
-    const input = companySettingsSchema.parse({ name: "Empresa A Ltda", cnpj: "11.222.333/0001-81", phone: "(16) 3333-0000" });
+    const input = companySettingsSchema.parse({ ...OPERACAO, name: "Empresa A Ltda", cnpj: "11.222.333/0001-81", phone: "(16) 3333-0000" });
     expect((await rejection(updateCompanySettings(contextOf(expedicao), input))).code).toBe("SEM_PERMISSAO");
     expect((await rejection(updateCompanySettings(contextOf(a.admin, "CANCELED"), input))).code).toBe("SOMENTE_LEITURA");
 
@@ -415,13 +418,13 @@ describe("configurações da empresa", () => {
   });
 
   it("endereço do depósito: completo ou vazio; latitude e longitude juntas", () => {
-    const partial = companySettingsSchema.safeParse({ name: "Empresa", depotStreet: "Rua X" });
+    const partial = companySettingsSchema.safeParse({ ...OPERACAO, name: "Empresa", depotStreet: "Rua X" });
     expect(partial.success).toBe(false);
     expect(partial.error?.issues.map((i) => i.path.join("."))).toEqual(
       expect.arrayContaining(["depotZipCode", "depotNumber", "depotNeighborhood", "depotCity", "depotState"]),
     );
-    const coords = companySettingsSchema.safeParse({ name: "Empresa", depotLatitude: "-21,17" });
+    const coords = companySettingsSchema.safeParse({ ...OPERACAO, name: "Empresa", depotLatitude: "-21,17" });
     expect(coords.error?.issues.map((i) => i.path.join("."))).toEqual(["depotLongitude"]);
-    expect(companySettingsSchema.parse({ name: "Empresa", depotLatitude: "-21,1767", depotLongitude: "-47.8208" })).toMatchObject({ depotLatitude: -21.1767, depotLongitude: -47.8208 });
+    expect(companySettingsSchema.parse({ ...OPERACAO, name: "Empresa", depotLatitude: "-21,1767", depotLongitude: "-47.8208" })).toMatchObject({ depotLatitude: -21.1767, depotLongitude: -47.8208 });
   });
 });

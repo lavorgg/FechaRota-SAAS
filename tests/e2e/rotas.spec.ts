@@ -210,8 +210,40 @@ test("Empresa: só ADMIN; endereço do depósito incompleto é recusado", async 
   await page.getByLabel("Número").fill("1600");
   await page.getByRole("button", { name: "Salvar" }).click();
   await expect(page.getByText("Dados da empresa salvos.")).toBeVisible();
-  const [company] = await sql<{ depotNumber: string }>(`SELECT "depotNumber" FROM "Company" WHERE name = 'Distribuidora Exemplo'`);
+  const [company] = await sql<{ id: string; depotNumber: string }>(`SELECT id, "depotNumber" FROM "Company" WHERE name = 'Distribuidora Exemplo'`);
   expect(company?.depotNumber).toBe("1600");
+
+  // Política de comprovante e retenção (decisões do dono do produto). Um arquivo de um ano atrás
+  // faz a redução da retenção pedir confirmação.
+  const [driver] = await sql<{ id: string }>(`SELECT id FROM "User" WHERE email = $1`, [USERS.motorista]);
+  await sql(
+    `INSERT INTO "FileObject" (key, "companyId", kind, "mimeType", "sizeBytes", status, "uploadedById", "createdAt", "updatedAt")
+     VALUES ($1, $2, 'PHOTO', 'image/jpeg', 100, 'CONFIRMED', $3, now() - interval '1 year', now())`,
+    [`companies/${company?.id}/proofs/antigo/foto-antiga.jpg`, company?.id, driver?.id],
+  );
+  await expect(page.getByLabel("Fuso horário")).toContainText("Horário de Brasília");
+  await page.getByLabel("Comprovante de entrega").click();
+  await page.getByRole("option", { name: "Assinatura do recebedor obrigatória" }).click();
+  await page.getByLabel("Guardar fotos e assinaturas por (meses)").fill("2");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect(page.getByText("A retenção mínima é de 3 meses.")).toBeVisible();
+  await page.getByLabel("Guardar fotos e assinaturas por (meses)").fill("6");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  const confirm = page.getByRole("alertdialog");
+  await expect(confirm).toContainText("Reduzir a retenção para 6 meses?");
+  await expect(confirm).toContainText("1 foto ou assinatura de comprovante já passou desse prazo");
+  await confirm.getByRole("button", { name: "Reduzir e apagar" }).click();
+  // O aviso "salvos" ainda pode ser o do salvamento anterior: a prova é o banco.
+  const operation = async () => (await sql<{ proofPolicy: string; months: number }>(`SELECT "proofPolicy", "fileRetentionMonths" AS months FROM "Company" WHERE id = $1`, [company?.id]))[0];
+  await expect.poll(operation).toEqual({ proofPolicy: "SIGNATURE_REQUIRED", months: 6 });
+
+  // Volta ao padrão: o fluxo do motorista (projeto "entregas") usa foto ou assinatura.
+  await page.getByLabel("Comprovante de entrega").click();
+  await page.getByRole("option", { name: "Foto ou assinatura (pelo menos uma)" }).click();
+  await page.getByLabel("Guardar fotos e assinaturas por (meses)").fill("12");
+  await page.getByRole("button", { name: "Salvar" }).click();
+  await expect.poll(operation).toEqual({ proofPolicy: "PHOTO_OR_SIGNATURE", months: 12 });
+  await sql(`DELETE FROM "FileObject" WHERE key LIKE '%/proofs/antigo/%'`);
 });
 
 test("motorista não chega às rotas do painel", async ({ page }) => {

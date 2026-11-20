@@ -188,6 +188,10 @@ A especificação permite rate limit em memória só com `NODE_ENV=development`.
 - **Correção de valores** (dinheiro e Pix de uma parada): só ADMIN, antes de concluir, com motivo obrigatório e registro na auditoria.
 - **Resumo do acerto** em A4, para imprimir, em `/fechamento/resumo`.
 - **Auditoria** em `/app/auditoria` (só ADMIN): quem, quando, o quê, sobre qual registro e o motivo, com filtro por período e evento. Senha, token e documento nunca aparecem.
+- **Configurações da empresa** (`/app/empresa`, só ADMIN):
+  - fuso horário, que define o "hoje";
+  - política de comprovante, que vale para as rotas iniciadas depois da mudança (a rota guarda a regra no "Iniciar rota");
+  - retenção das fotos e assinaturas, de 3 a 60 meses. Ao reduzir, a tela mostra quantos arquivos serão apagados e pede confirmação.
 - **Retenção:** um cron diário (`/api/cron/retencao`, 06:00 UTC) apaga do storage as fotos e assinaturas mais antigas que a retenção da empresa (padrão 12 meses), marca no banco e remove envios abandonados há mais de 24 horas. Só roda com `Authorization: Bearer $CRON_SECRET`, que a Vercel envia sozinha.
 - **Cabeçalhos de segurança:**
   - CSP com nonce novo por página: scripts só com o nonce; storage, ViaCEP e o próprio site liberados; nada de iframe;

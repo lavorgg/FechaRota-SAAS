@@ -1,9 +1,14 @@
-// Configurações da empresa: dados básicos e endereço do depósito (ponto de partida do link
-// do Google Maps; decisão do dono do produto). Só ADMIN ("usuários e configurações").
+// Configurações da empresa (só ADMIN: "usuários e configurações"): dados básicos, fuso, política
+// de comprovante, retenção de arquivos e endereço do depósito (partida do link do Google Maps).
+// Decisões do dono do produto: retenção de 3 a 60 meses; mudar a política de comprovante vale para
+// as rotas iniciadas depois (a rota guarda a política no "Iniciar rota").
 
 import "server-only";
 
+import type { ProofPolicy } from "../../domain/delivery";
+import { RETENTION_MONTHS_MAX, RETENTION_MONTHS_MIN, retentionCutoff } from "../../domain/retention";
 import { type ServiceContext, assertCan, assertCanWrite } from "../auth/context";
+import { ServiceError } from "../errors";
 import { getTenantDb } from "../tenant-db";
 import type { CompanySettingsData } from "../validation/routes";
 
@@ -12,6 +17,8 @@ const select = {
   cnpj: true,
   phone: true,
   timezone: true,
+  proofPolicy: true,
+  fileRetentionMonths: true,
   depotZipCode: true,
   depotStreet: true,
   depotNumber: true,
@@ -28,6 +35,8 @@ export type CompanySettingsDTO = {
   cnpj: string | null;
   phone: string | null;
   timezone: string;
+  proofPolicy: ProofPolicy;
+  fileRetentionMonths: number;
   depotZipCode: string | null;
   depotStreet: string | null;
   depotNumber: string | null;
@@ -56,4 +65,16 @@ export async function updateCompanySettings(ctx: ServiceContext, data: CompanySe
     });
     return after;
   });
+}
+
+/**
+ * Quantos arquivos o cron apagaria na próxima rodada com a retenção informada. A tela mostra
+ * antes de salvar uma retenção menor (decisão do dono do produto).
+ */
+export async function countFilesBeyondRetention(ctx: ServiceContext, months: number, now: Date = new Date()): Promise<number> {
+  assertCan(ctx, "usuarios.gerenciar");
+  if (!Number.isInteger(months) || months < RETENTION_MONTHS_MIN || months > RETENTION_MONTHS_MAX) {
+    throw new ServiceError("VALIDACAO", `A retenção deve ficar entre ${RETENTION_MONTHS_MIN} e ${RETENTION_MONTHS_MAX} meses.`);
+  }
+  return getTenantDb(ctx).fileObject.count({ where: { status: "CONFIRMED", deletedAt: null, createdAt: { lt: retentionCutoff(now, months) } } });
 }

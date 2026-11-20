@@ -4,7 +4,9 @@ import { z } from "zod";
 
 import { BRAZILIAN_STATES } from "../../domain/normalize";
 import { cepSchema } from "./catalog";
-import { dateStringSchema, idSchema, optionalCnpjSchema, optionalPhoneSchema, optionalText, versionSchema } from "./common";
+import { PROOF_POLICIES } from "../../domain/delivery";
+import { RETENTION_MONTHS_MAX, RETENTION_MONTHS_MIN } from "../../domain/retention";
+import { dateStringSchema, idSchema, optionalCnpjSchema, optionalPhoneSchema, optionalText, timezoneSchema, versionSchema } from "./common";
 
 export const MAX_ROUTE_STOPS = 200;
 
@@ -73,6 +75,13 @@ export const companySettingsSchema = z
     name: z.string({ error: "Informe o nome da empresa." }).trim().min(2, "Informe o nome da empresa.").max(120, "Nome longo demais."),
     cnpj: optionalCnpjSchema,
     phone: optionalPhoneSchema,
+    timezone: timezoneSchema,
+    proofPolicy: z.enum(PROOF_POLICIES, { error: "Escolha a política de comprovante." }),
+    fileRetentionMonths: z.coerce
+      .number({ error: "Informe a retenção em meses." })
+      .int("Use um número inteiro de meses.")
+      .min(RETENTION_MONTHS_MIN, `A retenção mínima é de ${RETENTION_MONTHS_MIN} meses.`)
+      .max(RETENTION_MONTHS_MAX, `A retenção máxima é de ${RETENTION_MONTHS_MAX} meses.`),
     depotZipCode: z
       .string()
       .optional()

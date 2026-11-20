@@ -131,10 +131,13 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Zod | `z.config({ jitless: true })` em `lib/validation/common.ts` | O teste de `new Function` do Zod gera violação de CSP |
 | Outros cabeçalhos | `X-Frame-Options: DENY`, `Permissions-Policy` (câmera e localização só do site), HSTS só no deploy | Seção 6 |
 | CORS do R2 | `pnpm storage:cors` por bucket, só origens https, PUT e GET | Seção 5.7 ("Bucket R2") |
+| Configurações da empresa | `/app/empresa` edita também fuso, política de comprovante e retenção de arquivos | **Decidido pelo dono do produto** |
+| Retenção de arquivos | De 3 a 60 meses; ao reduzir, a tela pede confirmação mostrando quantos arquivos serão apagados | **Decidido pelo dono do produto** |
+| Mudança da política de comprovante | Vale para rotas iniciadas depois: a rota guarda a política no "Iniciar rota" | **Decidido pelo dono do produto** |
 
 ## Perguntas em aberto para o dono do produto
 
-1. **Configurações da empresa.** A Fase 4 criou `/app/empresa` com nome, CNPJ, telefone e endereço do depósito. Fuso, política de comprovante e retenção de arquivos continuam sem tela. Em qual fase entram?
+Nenhuma no momento.
 
 ## Situação
 
