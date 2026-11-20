@@ -8,6 +8,11 @@ import { validateDocument } from "../../domain/document";
 import { parseBRLToCents } from "../../domain/money";
 import { normalizePhoneBR } from "../../domain/normalize";
 
+// Sem compilação de validadores com `new Function`: a CSP do app não libera eval, e só o teste
+// que o Zod faz para saber se pode usar eval já gera uma violação de CSP no navegador.
+// Todo schema importa este módulo, então a configuração vale antes da primeira validação.
+z.config({ jitless: true });
+
 export const MIN_PASSWORD_LENGTH = 8;
 // O bcrypt ignora o que passa de 72 bytes.
 export const MAX_PASSWORD_BYTES = 72;

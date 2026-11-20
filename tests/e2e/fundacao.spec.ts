@@ -16,6 +16,45 @@ test("cabeçalhos de segurança básicos em toda resposta", async ({ request }) 
     const headers = (await request.get(path)).headers();
     expect(headers["x-content-type-options"], path).toBe("nosniff");
     expect(headers["referrer-policy"], path).toBe("strict-origin-when-cross-origin");
+    expect(headers["x-frame-options"], path).toBe("DENY");
+    expect(headers["permissions-policy"], path).toContain("camera=(self)");
+  }
+});
+
+test("CSP com nonce novo por página e nenhuma violação no login, no painel e na área do motorista", async ({ page, request }) => {
+  const first = (await request.get("/login")).headers()["content-security-policy"] ?? "";
+  const second = (await request.get("/login")).headers()["content-security-policy"] ?? "";
+  expect(first).toMatch(/script-src 'self' 'nonce-[^']+' 'strict-dynamic'/);
+  expect(first).toContain("frame-ancestors 'none'");
+  expect(first).toContain("worker-src 'self'");
+  expect(first).not.toContain("unsafe-eval");
+  expect(first).not.toBe(second);
+
+  await page.addInitScript(() => {
+    const store = window as unknown as { __csp: string[] };
+    store.__csp = [];
+    document.addEventListener("securitypolicyviolation", (event) => store.__csp.push(`${event.violatedDirective} ${event.blockedURI}`));
+  });
+  const violations = () => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
+  await page.goto("/login");
+  await expect(page.getByRole("button", { name: "Entrar" })).toBeVisible();
+  expect(await violations()).toEqual([]);
+  // Endereço inexistente: a página 404 também leva o nonce.
+  const notFound = await page.goto("/endereco-que-nao-existe");
+  expect(notFound?.status()).toBe(404);
+  expect(notFound?.headers()["content-security-policy"]).toMatch(/'nonce-/);
+  await expect(page.getByRole("heading", { name: "Página não encontrada" })).toBeVisible();
+  expect(await violations()).toEqual([]);
+  await login(page, USERS.motorista);
+  await expect(page.getByTestId("indicador-sincronizacao")).toBeVisible();
+  await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller !== null)).toBe(true);
+  expect(await violations()).toEqual([]);
+  await page.context().clearCookies();
+  await login(page, USERS.admin);
+  for (const path of ["/app/dashboard", "/app/rotas", "/app/pedidos", "/app/clientes/novo"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    expect(await violations(), path).toEqual([]);
   }
 });
 

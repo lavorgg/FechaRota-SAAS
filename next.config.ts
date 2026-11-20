@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
         headers: [
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" },
+          // Câmera e localização só do próprio site (comprovante); nada de microfone ou pagamento.
+          { key: "Permissions-Policy", value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()" },
+          // HSTS só no deploy (https); localmente tudo roda em http.
+          ...(process.env.VERCEL_ENV ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }] : []),
         ],
       },
       {
