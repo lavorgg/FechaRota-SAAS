@@ -119,6 +119,18 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 | Pix não conferido ao concluir o acerto | A rota conclui e o Pix continua "a conferir"; a confirmação segue disponível no fechamento da rota concluída | **Decidido pelo dono do produto** |
 | Correção de entrega finalizada | Só valores recebidos (dinheiro e Pix) de uma parada, na tela de acerto, por ADMIN, com motivo e auditoria; desfecho e quantidades não mudam | **Decidido pelo dono do produto** |
 | Auditoria | Tela de consulta só para ADMIN, com filtro por período e tipo de evento | **Decidido pelo dono do produto** |
+| Permissão `auditoria.consultar` | Nova, só ADMIN, com o teste da matriz | A tabela da 5.1 não tem a linha; segue a decisão acima |
+| Fechamento | Abre a partir de "Em andamento" (com aviso); concluir só em "Aguardando acerto" | A máquina de estados só permite AGUARDANDO_ACERTO → CONCLUIDA |
+| Desmarcar Pix e corrigir valores | Só antes de concluir o acerto; corrigir recalcula o pagamento (Pix volta a "a conferir") | Depois de concluído, os números gravados não mudam; só a confirmação tardia de Pix |
+| Vasilhames no acerto | Voltam ao depósito = saíram − deixados + recolhidos; saldo com clientes = deixados − recolhidos | "Saldo da rota" sem fórmula na seção 5.8 |
+| Comprovantes no acerto | URLs de 5 minutos pedidas ao abrir o comprovante, não ao abrir a página | A página pode ficar aberta mais que 5 minutos |
+| Documento do recebedor | Mascarado na tela (só os 2 últimos caracteres) | Seção 6: dado pessoal |
+| Resumo do acerto | Imprime também antes de concluir, marcado "PRÉVIA" | Conferência antes de fechar |
+| Retenção | Lote de 500 arquivos por empresa por rodada; `PENDING` com mais de 24 h sai do banco; cron 06:00 UTC | Cabe no tempo da função; o resto vai na rodada seguinte |
+| CSP | Nonce novo por página no `proxy.ts`; `style-src 'unsafe-inline'`; `worker-src 'self'`; `upgrade-insecure-requests` só no deploy; 404 renderizada a cada requisição | React, Radix e Sonner usam estilo inline; com `strict-dynamic` o SW precisa de `worker-src`; o storage local é http |
+| Zod | `z.config({ jitless: true })` em `lib/validation/common.ts` | O teste de `new Function` do Zod gera violação de CSP |
+| Outros cabeçalhos | `X-Frame-Options: DENY`, `Permissions-Policy` (câmera e localização só do site), HSTS só no deploy | Seção 6 |
+| CORS do R2 | `pnpm storage:cors` por bucket, só origens https, PUT e GET | Seção 5.7 ("Bucket R2") |
 
 ## Perguntas em aberto para o dono do produto
 
@@ -126,9 +138,9 @@ Neste contêiner de nuvem o Playwright precisa de `PLAYWRIGHT_CHROMIUM_PATH=/opt
 
 ## Situação
 
-- **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview na Vercel, que exige contas de Vercel, Neon/Supabase, R2 e Upstash (passo a passo no README).
+- **Fase 1:** código, testes e build prontos. Pendente: o deploy de preview (ver Fase 6).
 - **Fase 2:** pronta.
 - **Fase 3:** pronta.
 - **Fase 4:** pronta. PDFs dos romaneios gerados pelo E2E em `test-results/`.
 - **Fase 5:** pronta. Teste em iPhone e Android reais depende do deploy de preview (checklist no README).
-- Deixados para a fase que os consome: cálculo do fechamento, CORS do R2 e limpeza de arquivos `PENDING` (Fase 6).
+- **Fase 6:** código, testes e README de deploy prontos. Pendente: deploys de preview e de produção, que exigem as contas (Vercel Pro, Neon/Supabase, R2, Upstash) e um domínio.

@@ -89,7 +89,7 @@ describe("dashboard com o seed", () => {
     await prisma.route.update({ where: { id: route.id }, data: { status: "AGUARDANDO_ACERTO", finishedAt } });
     try {
       const { alerts } = await getDashboard(contextOf(admin), today);
-      expect(alerts.overdueSettlements).toEqual([{ code: route.code, name: route.name, deliveryDate: yesterday }]);
+      expect(alerts.overdueSettlements).toEqual([{ id: route.id, code: route.code, name: route.name, deliveryDate: yesterday }]);
     } finally {
       await prisma.route.update({ where: { id: route.id }, data: { status: "CONCLUIDA" } });
     }

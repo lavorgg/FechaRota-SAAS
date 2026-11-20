@@ -245,3 +245,33 @@ test("ADMIN vê as rotas de todos na área do motorista; logout apaga os dados d
   await expect(page).toHaveURL(/\/login$/);
   expect(await names()).not.toContain(driverDb);
 });
+
+test("acerto da rota entregue: confirma o Pix, informa o caixa e conclui", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1366, height: 900 }, locale: "pt-BR", timezoneId: "America/Sao_Paulo" });
+  const page = await context.newPage();
+  await login(page, USERS.expedicao);
+  await page.goto(`/app/rotas/${routeId}/fechamento`);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Aguardando acerto");
+
+  // Esperado: parcial do Açougue (343,20) + Mercadinho (442,18); os faturados não contam.
+  const figure = (label: string) => page.locator("dl > div").filter({ has: page.getByText(label, { exact: true }) });
+  await expect(figure("Esperado")).toContainText(/R\$\s785,38/);
+  await expect(figure("Pix a conferir")).toContainText(/R\$\s343,20/);
+  await page.getByRole("region", { name: "Pix" }).getByRole("checkbox").click();
+  await expect(figure("Pix conferido")).toContainText(/R\$\s343,20/);
+
+  await page.getByLabel("Dinheiro entregue pelo motorista no caixa").fill("440,00");
+  await expect(page.getByTestId("diferenca-caixa")).toHaveText(/Falta de R\$\s2,18/);
+  await page.getByLabel("Dinheiro entregue pelo motorista no caixa").fill("442,18");
+  await expect(page.getByTestId("diferenca-caixa")).toHaveText("Sem diferença");
+  await page.getByRole("button", { name: "Concluir acerto" }).click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Concluir acerto" }).click();
+  await expect(page.getByText(/Acerto concluído em .* por Edu Expedição/)).toBeVisible();
+  expect((await sql<{ status: string; cash: number }>(`SELECT status, "cashHandedInCents" AS cash FROM "Route" WHERE id = $1`, [routeId]))[0]).toEqual({ status: "CONCLUIDA", cash: 44_218 });
+
+  // Comprovante com foto vindo do storage (URL de 5 minutos), carregado sem violar a CSP.
+  await page.getByTestId("parada-acerto").first().getByRole("button", { name: "Ver comprovante" }).click();
+  const photo = page.getByRole("dialog").getByRole("img", { name: "Foto 1 da entrega" });
+  await expect.poll(() => photo.evaluate((image: HTMLImageElement) => image.naturalWidth)).toBeGreaterThan(0);
+  await context.close();
+});
