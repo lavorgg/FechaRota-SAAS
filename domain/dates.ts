@@ -128,3 +128,35 @@ export function formatInstant(instant: Date, timeZone: string): string {
     .format(instant)
     .replace(",", "");
 }
+
+/** Diferença, em minutos, entre o horário local do fuso e o UTC naquele instante. */
+function offsetMinutes(instant: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(instant);
+  const get = (type: Intl.DateTimeFormatPartTypes) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+  const asUtc = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+  return Math.round((asUtc - instant.getTime()) / 60_000);
+}
+
+/**
+ * Instante em que o dia começa no fuso: startOfDayInTimeZone("2026-11-16", "America/Sao_Paulo")
+ * = 2026-11-16T03:00:00Z. Usado para filtrar registros por data de calendário da empresa.
+ */
+export function startOfDayInTimeZone(dateString: string, timeZone: string): Date {
+  assertDateString(dateString);
+  const guess = dateStringToDbDate(dateString).getTime();
+  const first = guess - offsetMinutes(new Date(guess), timeZone) * 60_000;
+  // Segunda passada: acerta dias em que o deslocamento muda (horário de verão).
+  return new Date(guess - offsetMinutes(new Date(first), timeZone) * 60_000);
+}
+
+/**
+ * Subtrai meses de calendário em UTC, sem "transbordar" o fim do mês:
+ * 31/03 − 1 mês = 28/02 (ou 29/02), não 03/03.
+ */
+export function subtractMonths(instant: Date, months: number): Date {
+  if (!Number.isInteger(months) || months < 0) throw new Error("Meses inválidos.");
+  const year = instant.getUTCFullYear();
+  const month = instant.getUTCMonth() - months;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month, Math.min(instant.getUTCDate(), lastDay), instant.getUTCHours(), instant.getUTCMinutes(), instant.getUTCSeconds(), instant.getUTCMilliseconds()));
+}

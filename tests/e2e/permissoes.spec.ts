@@ -11,7 +11,7 @@ async function menuItems(page: Page): Promise<string[]> {
 test("ADMIN: menu completo; acessa também a área do motorista", async ({ page }) => {
   await login(page, USERS.admin);
   await expect(page).toHaveURL(/\/app\/dashboard$/);
-  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Rotas", "Clientes", "Produtos", "Veículos", "Usuários", "Empresa"]);
+  expect(await menuItems(page)).toEqual(["Dashboard", "Pedidos", "Rotas", "Clientes", "Produtos", "Veículos", "Usuários", "Empresa", "Auditoria"]);
 
   const users = await page.goto("/app/usuarios");
   expect(users?.status()).toBe(200);

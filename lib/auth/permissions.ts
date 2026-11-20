@@ -4,6 +4,7 @@
 // Decisões do dono do produto registradas em CLAUDE.md:
 // - ADMIN pode criar e promover outros ADMIN.
 // - Reabrir rota liberada é só do ADMIN (vale a matriz da 5.1, não a 3.8).
+// - Tela de auditoria só para ADMIN.
 
 export const USER_ROLES = ["ADMIN", "EXPEDICAO", "MOTORISTA"] as const;
 export type UserRole = (typeof USER_ROLES)[number];
@@ -29,6 +30,8 @@ export const PERMISSIONS = {
   "acerto.realizar": ["ADMIN", "EXPEDICAO"],
   /** Corrigir entrega já finalizada (com motivo). */
   "entregas.corrigir": ["ADMIN"],
+  /** Consultar o registro de auditoria (decisão do dono do produto: só ADMIN). */
+  "auditoria.consultar": ["ADMIN"],
 } as const satisfies Record<string, readonly UserRole[]>;
 
 export type Permission = keyof typeof PERMISSIONS;

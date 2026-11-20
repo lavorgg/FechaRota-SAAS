@@ -1,17 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  addDays,
-  dateStringToDbDate,
-  dayOfWeekInTimeZone,
-  dayOfWeekOfDateString,
-  dbDateToDateString,
-  formatDateString,
-  formatInstant,
-  isValidDateString,
-  isValidTimeZone,
-  todayInTimeZone,
-} from "./dates";
+import { addDays, dateStringToDbDate, dayOfWeekInTimeZone, dayOfWeekOfDateString, dbDateToDateString, formatDateString, formatInstant, isValidDateString, isValidTimeZone, todayInTimeZone, startOfDayInTimeZone, subtractMonths } from "./dates";
 
 const SP = "America/Sao_Paulo";
 
@@ -110,5 +99,24 @@ describe("instantes", () => {
     expect(isValidTimeZone(SP)).toBe(true);
     expect(isValidTimeZone("America/Manaus")).toBe(true);
     expect(isValidTimeZone("Marte/Olympus")).toBe(false);
+  });
+});
+
+describe("startOfDayInTimeZone", () => {
+  it("meia-noite local em UTC", () => {
+    expect(startOfDayInTimeZone("2026-11-16", "America/Sao_Paulo").toISOString()).toBe("2026-11-16T03:00:00.000Z");
+    expect(startOfDayInTimeZone("2026-11-16", "America/Manaus").toISOString()).toBe("2026-11-16T04:00:00.000Z");
+    expect(startOfDayInTimeZone("2026-11-16", "America/Noronha").toISOString()).toBe("2026-11-16T02:00:00.000Z");
+    expect(startOfDayInTimeZone("2026-11-16", "UTC").toISOString()).toBe("2026-11-16T00:00:00.000Z");
+  });
+});
+
+describe("subtractMonths", () => {
+  it("subtrai meses sem transbordar o fim do mês", () => {
+    expect(subtractMonths(new Date("2026-11-20T06:00:00Z"), 12).toISOString()).toBe("2025-11-20T06:00:00.000Z");
+    expect(subtractMonths(new Date("2026-03-31T10:00:00Z"), 1).toISOString()).toBe("2026-02-28T10:00:00.000Z");
+    expect(subtractMonths(new Date("2028-03-31T10:00:00Z"), 1).toISOString()).toBe("2028-02-29T10:00:00.000Z");
+    expect(subtractMonths(new Date("2026-01-15T00:00:00Z"), 3).toISOString()).toBe("2025-10-15T00:00:00.000Z");
+    expect(() => subtractMonths(new Date(), -1)).toThrow();
   });
 });

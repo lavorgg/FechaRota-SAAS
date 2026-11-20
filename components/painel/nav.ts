@@ -3,7 +3,7 @@
 
 import type { Permission } from "@/lib/auth/permissions";
 
-export type NavIcon = "dashboard" | "pedidos" | "rotas" | "clientes" | "produtos" | "veiculos" | "usuarios" | "empresa";
+export type NavIcon = "dashboard" | "pedidos" | "rotas" | "clientes" | "produtos" | "veiculos" | "usuarios" | "empresa" | "auditoria";
 
 export type NavItem = { href: string; label: string; icon: NavIcon; permission: Permission; usesDate: boolean };
 
@@ -16,4 +16,5 @@ export const PANEL_NAV: readonly NavItem[] = [
   { href: "/app/veiculos", label: "Veículos", icon: "veiculos", permission: "cadastros.gerenciar", usesDate: false },
   { href: "/app/usuarios", label: "Usuários", icon: "usuarios", permission: "usuarios.gerenciar", usesDate: false },
   { href: "/app/empresa", label: "Empresa", icon: "empresa", permission: "usuarios.gerenciar", usesDate: false },
+  { href: "/app/auditoria", label: "Auditoria", icon: "auditoria", permission: "auditoria.consultar", usesDate: false },
 ];

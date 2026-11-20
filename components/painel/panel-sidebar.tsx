@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2Icon, CarFrontIcon, ClipboardListIcon, LayoutDashboardIcon, PackageIcon, RouteIcon, StoreIcon, TruckIcon, UsersIcon } from "lucide-react";
+import { Building2Icon, ScrollTextIcon, CarFrontIcon, ClipboardListIcon, LayoutDashboardIcon, PackageIcon, RouteIcon, StoreIcon, TruckIcon, UsersIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -29,6 +29,7 @@ const ICONS: Record<NavIcon, typeof LayoutDashboardIcon> = {
   veiculos: CarFrontIcon,
   usuarios: UsersIcon,
   empresa: Building2Icon,
+  auditoria: ScrollTextIcon,
 };
 
 type Items = ReadonlyArray<Omit<NavItem, "permission">>;

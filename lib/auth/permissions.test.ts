@@ -15,6 +15,8 @@ const SPEC: Record<Permission, Record<UserRole, boolean>> = {
   "entregas.registrar": { ADMIN: true, EXPEDICAO: false, MOTORISTA: true },
   "acerto.realizar": { ADMIN: true, EXPEDICAO: true, MOTORISTA: false },
   "entregas.corrigir": { ADMIN: true, EXPEDICAO: false, MOTORISTA: false },
+  // Não está na tabela da 5.1: tela de auditoria só ADMIN (decisão do dono do produto).
+  "auditoria.consultar": { ADMIN: true, EXPEDICAO: false, MOTORISTA: false },
 };
 
 describe("matriz de permissões", () => {
