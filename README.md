@@ -176,30 +176,91 @@ A especificação pedia MinIO no Docker Compose, mas a imagem `minio/minio` foi 
 
 A especificação permite rate limit em memória só com `NODE_ENV=development`. Os testes E2E, porém, rodam sobre o build de produção (`NODE_ENV=production`) na máquina local, onde não há Upstash. Para isso existe `ALLOW_IN_MEMORY_RATE_LIMIT="true"`, que só vale fora da Vercel: com `VERCEL_ENV` definida, a variável faz o build falhar e o Upstash continua obrigatório.
 
-## Deploy de preview na Vercel
+## Fechamento, auditoria e segurança (Fase 6)
 
-O uso comercial exige o **plano Pro** da Vercel.
+- **Fechamento** em `/app/rotas/[id]/fechamento` (botão "Fechamento" na rota, a partir de "Em andamento"):
+  - mercadoria carregada, entregue e devolvida por produto;
+  - dinheiro esperado (pedidos entregues) contra dinheiro e Pix recebidos;
+  - Pix com "Confirmado no extrato" (só conta como recebido depois da conferência);
+  - vasilhames, pendências com reagendar e comprovantes (fotos e assinatura abertos por link de 5 minutos).
+- **Sobra/falta** = dinheiro entregue no caixa − (esperado − Pix informado).
+- **"Concluir acerto"** exige todas as paradas registradas e grava o caixa e os números na auditoria. Pix não conferido não impede: continua "a conferir" e pode ser confirmado depois, no fechamento da rota concluída.
+- **Correção de valores** (dinheiro e Pix de uma parada): só ADMIN, antes de concluir, com motivo obrigatório e registro na auditoria.
+- **Resumo do acerto** em A4, para imprimir, em `/fechamento/resumo`.
+- **Auditoria** em `/app/auditoria` (só ADMIN): quem, quando, o quê, sobre qual registro e o motivo, com filtro por período e evento. Senha, token e documento nunca aparecem.
+- **Retenção:** um cron diário (`/api/cron/retencao`, 06:00 UTC) apaga do storage as fotos e assinaturas mais antigas que a retenção da empresa (padrão 12 meses), marca no banco e remove envios abandonados há mais de 24 horas. Só roda com `Authorization: Bearer $CRON_SECRET`, que a Vercel envia sozinha.
+- **Cabeçalhos de segurança:**
+  - CSP com nonce novo por página: scripts só com o nonce; storage, ViaCEP e o próprio site liberados; nada de iframe;
+  - `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy` e `Permissions-Policy`;
+  - HSTS no deploy.
 
-1. **Banco (Neon ou Supabase, região São Paulo `sa-east-1`).** Crie um banco só para preview. Preview nunca aponta para o banco de produção. Anote o endereço com pooling (`DATABASE_URL`) e o endereço direto (`DIRECT_URL`).
-2. **Arquivos (Cloudflare R2).** Crie um bucket privado só para preview e um token de API com leitura e escrita nesse bucket. O endpoint é `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, a região é `auto` e `S3_FORCE_PATH_STYLE` é `false`.
-3. **Rate limit (Upstash Redis).** Crie uma instância para preview e anote a URL REST e o token.
-4. **Projeto na Vercel.** Conecte o repositório. Em *Settings → General*, use Node.js 22. A região das funções (`gru1`) já está no `vercel.json`.
-5. **Variáveis de ambiente**, no ambiente *Preview*: todas as do `.env.example`, exceto `ALLOW_IN_MEMORY_RATE_LIMIT` e `ENABLE_DEV_IMPERSONATION`, que devem ficar ausentes. Gere o `CRON_SECRET` com `openssl rand -hex 32`.
-6. **Migrations do banco de preview.** O build só aplica migrations em produção. No preview, aplique da sua máquina, com a `DIRECT_URL` do banco de preview:
+## Deploy na Vercel (produção e preview)
+
+O uso comercial exige o **plano Pro** da Vercel. Produção e preview usam bancos, buckets, instâncias de Redis e segredos **separados**.
+
+### 1. Contas e recursos (um de cada por ambiente)
+
+1. **Banco: Neon ou Supabase, região São Paulo (`sa-east-1`).** Crie dois bancos (ou dois branches no Neon): produção e preview. Anote de cada um o endereço com pooling (`DATABASE_URL`) e o direto (`DIRECT_URL`).
+2. **Arquivos: Cloudflare R2.** Crie dois buckets **privados** (ex.: `fecharota-prod` e `fecharota-preview`), sem domínio público. Crie um token de API com leitura e escrita só nesses buckets. O endpoint é `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, a região é `auto` e `S3_FORCE_PATH_STYLE` é `false`.
+3. **CORS do R2** (o celular envia as fotos direto para o bucket, e o acerto mostra os comprovantes). Para cada bucket, com as credenciais dele:
+
+   ```bash
+   S3_ENDPOINT="https://<ACCOUNT_ID>.r2.cloudflarestorage.com" S3_REGION="auto" S3_ACCESS_KEY_ID="..." S3_SECRET_ACCESS_KEY="..." S3_BUCKET="fecharota-prod" S3_FORCE_PATH_STYLE="false" CORS_ORIGINS="https://app.seudominio.com.br" pnpm storage:cors
+   ```
+
+   No bucket de preview, use a origem dos previews (ex.: `https://fecharota-git-main-suaconta.vercel.app`). O script só aceita `https` e recusa curinga. Pelo painel da Cloudflare, o equivalente é *R2 → bucket → Settings → CORS Policy*:
+
+   ```json
+   [{ "AllowedOrigins": ["https://app.seudominio.com.br"], "AllowedMethods": ["PUT", "GET"], "AllowedHeaders": ["content-type"], "MaxAgeSeconds": 3600 }]
+   ```
+
+4. **Rate limit: Upstash Redis.** Uma instância por ambiente. Anote a URL REST e o token. As chaves já levam o ambiente no prefixo.
+
+### 2. Projeto na Vercel
+
+1. Importe o repositório. `main` vira produção; cada pull request ganha um preview.
+2. Em *Settings → General*, use Node.js 22. A região das funções (`gru1`, São Paulo) e o cron de retenção já estão no `vercel.json`.
+3. Em *Settings → Environment Variables*, cadastre separadamente para **Production** e para **Preview**:
+
+| Variável | Valor |
+|---|---|
+| `DATABASE_URL` | Endereço com pooling do banco do ambiente |
+| `DIRECT_URL` | Endereço direto do banco do ambiente |
+| `S3_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| `S3_REGION` | `auto` |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY` | Token do R2 |
+| `S3_BUCKET` | Bucket do ambiente |
+| `S3_FORCE_PATH_STYLE` | `false` |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Instância do ambiente |
+| `CRON_SECRET` | `openssl rand -hex 32`, diferente em cada ambiente |
+
+`ALLOW_IN_MEMORY_RATE_LIMIT` e `ENABLE_DEV_IMPERSONATION` **não** são cadastradas: o app se recusa a subir na Vercel com rate limit em memória, e a troca de perfil só existe em `next dev`.
+
+### 3. Primeiro deploy
+
+1. **Produção:** o build roda `prisma generate`, `prisma migrate deploy` (só com `VERCEL_ENV=production`, usando a `DIRECT_URL`) e `next build`. Faça push em `main`.
+2. **Preview:** o build não aplica migrations. Aplique da sua máquina, com a `DIRECT_URL` do banco de preview:
 
    ```bash
    DIRECT_URL="postgresql://..." pnpm db:deploy
    ```
 
-7. **Seed em preview** (opcional, sobre o banco vazio). Use as variáveis do ambiente de preview:
+3. **Seed em preview** (opcional, sobre o banco vazio; nunca roda em produção), com as variáveis do preview:
 
    ```bash
    DATABASE_URL="postgresql://..." DIRECT_URL="postgresql://..." S3_ENDPOINT="https://..." S3_REGION="auto" S3_ACCESS_KEY_ID="..." S3_SECRET_ACCESS_KEY="..." S3_BUCKET="..." S3_FORCE_PATH_STYLE="false" pnpm db:seed
    ```
 
-8. **Deploy.** Abra um pull request ou faça push de um branch. Quando o deploy terminar, `https://<url-do-preview>/api/health` deve responder com `database` e `storage` em `ok`.
+4. **Conferência:**
+   - `https://<seu-domínio>/api/health` responde `database` e `storage` em `ok`;
+   - em *Settings → Cron Jobs* aparece `/api/cron/retencao`;
+   - entre no app pelo celular, em HTTPS, e siga o checklist da área do motorista acima.
+5. **Domínio próprio:** em *Settings → Domains*. Depois de trocar o domínio, rode `pnpm storage:cors` de novo com a origem nova.
 
-O deploy de produção, o CORS do R2 e os crons entram na Fase 6.
+### 4. Segredos
+
+- Só em variáveis de ambiente da Vercel, separadas por ambiente. Nada de segredo no repositório: o `.env.example` só tem valores de desenvolvimento local.
+- Trocar o `CRON_SECRET` não exige nada além do novo deploy: a Vercel manda o valor atual.
 
 ## Estrutura
 

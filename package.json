@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "storage:cors": "tsx scripts/storage-cors.ts",
     "db:reset": "tsx scripts/db-reset.ts",
     "postinstall": "prisma generate"
   },
